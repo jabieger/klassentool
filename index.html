@@ -1,0 +1,2070 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Klassenerfassung</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#2454C7">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Klassentool">
+<style>
+  :root{
+    --bg:#FAFAF7;
+    --surface:#FFFFFF;
+    --stripe:#F4F3EE;
+    --ink:#1B1C19;
+    --muted:#8B8A80;
+    --line:#E6E3DB;
+    --accent:#2454C7;
+    --hw:#B5502A;
+    --mat:#3E6E52;
+    --sonst:#3B5C86;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    -webkit-tap-highlight-color:transparent;
+    padding:max(16px, env(safe-area-inset-top)) 0 40px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; row-gap:10px;
+    padding:2px 18px 16px; border-bottom:1px solid var(--line); margin-bottom:14px; gap:12px;
+  }
+  h1{ font-size:18px; font-weight:700; margin:0; letter-spacing:-0.01em; }
+
+  .header-left{ display:flex; align-items:center; gap:10px; }
+
+  /* ---- Klassen-Auswahlmenü ---- */
+  .classpicker{ position:relative; }
+  .classpicker-btn{
+    display:flex; align-items:center; gap:6px;
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:8px 12px; font-size:16px; font-weight:700; color:var(--ink); cursor:pointer;
+  }
+  .classpicker-btn .chev{ font-size:11px; color:var(--muted); transition:transform .15s ease; }
+  .classpicker-btn.open .chev{ transform:rotate(180deg); }
+  .classpicker-menu{
+    position:absolute; top:calc(100% + 6px); left:0; z-index:20;
+    background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    box-shadow:0 12px 32px rgba(20,19,15,0.16); min-width:200px; padding:6px; display:none;
+  }
+  .classpicker-menu.show{ display:block; }
+  .classpicker-item{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 12px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;
+  }
+  .classpicker-item:hover{ background:var(--stripe); }
+  .classpicker-item.active{ color:var(--accent); }
+  .classpicker-item .check{ font-size:13px; }
+  .classpicker-item .count{ color:var(--muted); font-weight:500; font-size:12px; }
+  .classpicker-divider{ height:1px; background:var(--line); margin:6px 4px; }
+  .classpicker-manage{
+    display:block; width:100%; text-align:left; background:none; border:none;
+    padding:10px 12px; font-size:13px; font-weight:700; color:var(--accent); cursor:pointer; border-radius:8px;
+  }
+  .classpicker-manage:hover{ background:var(--stripe); }
+
+  .settings-btn{
+    width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:var(--surface);
+    display:flex; align-items:center; justify-content:center; font-size:17px; cursor:pointer; color:var(--muted); flex-shrink:0;
+  }
+
+  /* ---- Einstellungen: Klassen & Schüler verwalten ---- */
+  .settings-panel{
+    background:var(--surface); border:1px solid var(--line); border-radius:18px;
+    padding:20px; width:100%; max-width:420px; max-height:82vh; overflow-y:auto;
+    box-shadow:0 20px 60px rgba(20,19,15,0.28);
+  }
+  .settings-panel h2{ margin:0 0 12px; font-size:18px; }
+  .settings-panel .close{ float:right; background:none; border:none; font-size:16px; color:var(--muted); cursor:pointer; }
+  .settings-tabs{ display:flex; background:var(--stripe); border:1px solid var(--line); border-radius:12px; padding:3px; margin-bottom:6px; }
+  .settings-tabs button{ flex:1; border:none; background:transparent; padding:9px 8px; font-size:12.5px; font-weight:700; color:var(--muted); border-radius:9px; cursor:pointer; }
+  .settings-tabs button.active{ background:var(--ink); color:#fff; }
+  .settings-section{ margin-top:18px; }
+  .settings-section h3{ font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 10px; }
+
+  .listrow{
+    display:flex; align-items:center; gap:8px; background:var(--stripe); border-radius:10px;
+    padding:9px 10px; margin-bottom:7px;
+  }
+  .listrow.activerow{ background:#E4EAFB; }
+  .listrow input.editfield{
+    flex:1; border:none; background:transparent; font:inherit; font-size:13.5px; font-weight:600; color:var(--ink);
+    padding:2px 0; border-bottom:1.5px solid var(--accent);
+  }
+  .listrow input.editfield:focus{ outline:none; }
+  .listrow .rowlabel{ flex:1; font-size:13.5px; font-weight:600; cursor:pointer; }
+  .listrow .rowlabel.activeclass{ color:var(--accent); }
+  .iconbtn{
+    width:26px; height:26px; border-radius:7px; border:none; background:transparent;
+    display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--muted); cursor:pointer; flex-shrink:0;
+  }
+  .iconbtn:hover{ background:var(--line); }
+  .iconbtn.danger:hover{ background:#F5E3D8; color:var(--hw); }
+  .badge-active{
+    font-size:10.5px; font-weight:700; color:var(--accent); background:#E4EAFB;
+    padding:2px 7px; border-radius:6px; flex-shrink:0;
+  }
+
+  .addrow{ display:flex; gap:8px; margin-top:4px; }
+  .addrow input{
+    flex:1; border:1.5px solid var(--line); border-radius:9px; padding:9px 11px;
+    font:inherit; font-size:13.5px; color:var(--ink); background:var(--bg);
+  }
+  .addrow input:focus{ outline:none; border-color:var(--accent); }
+  .addrow button{
+    border:none; border-radius:9px; padding:9px 14px; font-size:13px; font-weight:700;
+    background:var(--ink); color:#fff; cursor:pointer; flex-shrink:0;
+  }
+  .addrow button:disabled{ opacity:.4; cursor:default; }
+
+  .emptylist{ font-size:12.5px; color:var(--muted); font-style:italic; padding:4px 2px 8px; }
+
+  .header-controls{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+
+  .muendl-toggle-wrap{ display:flex; align-items:center; gap:7px; }
+  .muendl-toggle-wrap .toggle-label{ font-size:12px; font-weight:600; color:var(--muted); white-space:nowrap; }
+  .switch{ position:relative; display:inline-block; width:40px; height:24px; flex-shrink:0; }
+  .switch input{ opacity:0; width:0; height:0; }
+  .switch .slider{ position:absolute; inset:0; background-color:var(--line); border-radius:999px; cursor:pointer; transition:background-color .18s ease; }
+  .switch .slider::before{ content:""; position:absolute; height:18px; width:18px; left:3px; top:3px; background-color:#fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.25); transition:transform .18s ease; }
+  .switch input:checked + .slider{ background-color:var(--ink); }
+  .switch input:checked + .slider::before{ transform:translateX(16px); }
+
+  .datepicker{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); font-weight:600; }
+  .datepicker .weekday{ text-transform:capitalize; }
+  .datepicker input[type=date]{ font:inherit; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:5px 8px; background:var(--surface); }
+  .datepicker .today-btn{ font-size:12px; font-weight:700; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; }
+  .datepicker .today-btn:disabled{ opacity:0.4; cursor:default; }
+
+  .wrap{ padding:0 18px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table{ border-collapse:collapse; width:100%; min-width:720px; }
+  thead th{
+    position:sticky; top:0; background:var(--bg); z-index:1;
+    text-align:center; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--muted); font-weight:700; padding:0 6px 10px; white-space:nowrap;
+  }
+  thead th.namehead{ text-align:left; position:sticky; left:0; z-index:3; background:var(--bg); }
+  th .icon{ display:block; font-size:14px; margin-bottom:2px; }
+
+  tbody td{ padding:0; border-bottom:1px solid var(--line); }
+  tbody tr:nth-child(odd) td{ background:var(--stripe); }
+  tbody tr:nth-child(even) td{ background:var(--surface); }
+
+  .namecell{
+    position:sticky; left:0; z-index:2;
+    padding:11px 14px; font-weight:700; font-size:14px; white-space:nowrap;
+    /*border-right:1px solid var(--line);*/
+    background:inherit;
+    width: 250px;
+  }
+  .namecell .num{ color:var(--muted); font-weight:600; font-size:11px; margin-right:8px; }
+
+  .dotcell{ text-align:center; padding:8px 4px; width:78px; }
+  .dot{
+
+    display:inline-flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:transform .1s ease;
+    color: lightgray;
+    font-size:0.7rem;
+    width: 50px;
+    height: 28px;
+  }
+
+  .dot_mat{
+    width:50px; height:28px; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:transform .1s ease;
+    color: lightgray;
+    font-size:0.7rem;
+  }
+
+  .dot:active{ transform:scale(0.88); }
+  .dot.on{ color: var(--hw); font-size:12px; font-weight:700;
+    border: 1px solid var(--hw);
+  padding: 4px;
+  border-radius: 4px;
+width: 28px; height: 24px;}
+
+
+  .matcell{ text-align:center; padding:8px 1rem; width:100px; }
+  .matinner{ display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .matlabel{ font-size:12px; font-weight:700; color:var(--mat); white-space:nowrap; margin-left: 6px;     height: 28px;
+    align-content: center;}
+
+  .sonstcell{ padding:8px 1rem; width:190px; position: relative; }
+  .noteinput{
+    width:100%; border:none; background:transparent; font:inherit; font-size:12.5px;
+    color:var(--ink); border-bottom:1px dashed var(--line); padding:4px 0;
+  }
+  .noteinput::placeholder{ color:#C9C6B8; }
+  .noteinput:focus{ outline:none; }
+  .noteinput.filled{ color:var(--accent); font-weight:700; border-bottom-color:transparent; }
+
+
+  .note-suggestions {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 4px);
+    width: 230px;
+    z-index: 50;
+
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(20,19,15,0.16);
+
+    padding: 5px;
+    display: none;
+  }
+  .note-suggestions.show {
+    display: block;
+  }
+  .note-suggestion {
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: left;
+    padding: 8px 9px;
+    border-radius: 7px;
+
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .note-suggestion:hover,
+  .note-suggestion.active {
+    background: var(--stripe);
+  }
+    .note-wrap {
+      position: relative;
+    }
+    .note-wrap:focus-within .note-suggestions {
+      display: block;
+    }
+
+  .muendlcell{ width:200px; padding:8px 10px; padding-left: 3rem;}
+  .pillrow{ display:flex; gap:5px; }
+  .pill{
+    width:28px; height:28px; border-radius:50%;
+    background:var(--surface); font-size:10.5px; font-weight:800; color:var(--muted);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    flex-shrink:0; transition:transform .1s ease;
+  }
+  .pill:active{ transform:scale(0.88); }
+  .pill.p1{ border:1.5px solid var(--line); }
+  .pill.p1.on{ background:#2F7A4C; color:#fff; }
+  .pill.p2{ border:1.5px solid var(--line); }
+  .pill.p2.on{ background:#8FC79B; color:#1F4A2C; }
+  .pill.p3{ border:1.5px solid var(--line); }
+  .pill.p3.on{ background:#fff289; color:#5C5540; }
+  .pill.p4{ border:1.5px solid var(--line); }
+  .pill.p4.on{ background:#E3A574; color:#5C3313; }
+  .pill.p5{ border:1.5px solid var(--line); }
+  .pill.p5.on{ background:#C0453A; color:#fff; }
+
+  body.hide-muendl .muendl-col{ display:none; }
+
+  .bottombar{ position:sticky; bottom:0; margin-top:22px; padding:0 18px; }
+  .btn{ width:100%; border:none; border-radius:var(--radius); padding:14px; font-size:15px; font-weight:700; cursor:pointer; }
+  .btn.primary{ background:var(--ink); color:#fff; }
+
+  footer{ text-align:center; color:var(--muted); font-size:11.5px; margin-top:20px; padding:0 16px; }
+
+  /* Popover: Materialauswahl */
+  .overlay{
+    position:fixed; inset:0; background:rgba(27,28,25,0.35);
+    display:none; align-items:center; justify-content:center; z-index:30; padding:20px;
+  }
+  .overlay.show{ display:flex; }
+  .popover{
+    background:var(--surface); border:1px solid var(--line); border-radius:16px;
+    padding:16px; width:100%; max-width:280px; box-shadow:0 12px 32px rgba(20,19,15,0.16);
+  }
+  .popover h3{ margin:0 0 12px; font-size:14px; font-weight:700; }
+  .popover .optbtn{
+    display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+    background:var(--stripe); border:1.5px solid transparent; border-radius:10px;
+    padding:11px 12px; margin-bottom:8px; font:inherit; font-size:13.5px; font-weight:600;
+    color:var(--ink); cursor:pointer;
+  }
+  .popover .optbtn.selected{ border-color:var(--mat); background:#E4EFEC; color:var(--mat); }
+  .popover .optbtn .oicon{ font-size:16px; }
+  .popover .closebtn{
+    width:100%; background:transparent; color:var(--muted); border:none;
+    padding:9px 0 0; font-size:12.5px; font-weight:600; cursor:pointer;
+  }
+
+  /* ---- Übersicht: Toggle ---- */
+  .ov-toggle{ display:flex; background:var(--stripe); border:1px solid var(--line); border-radius:12px; padding:3px; margin-bottom:16px; width:fit-content; }
+  .ov-toggle button{ border:none; background:transparent; padding:8px 16px; font-size:13px; font-weight:700; color:var(--muted); border-radius:9px; cursor:pointer; }
+  .ov-toggle button.active{ background:var(--ink); color:#fff; }
+
+  /* ---- Übersicht: Kategorien-Ansicht ---- */
+  .ov-pupilblock{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; }
+  .ov-pupilblock .ov-pname{ font-weight:700; font-size:15px; margin-bottom:16px; }
+  .ov-catline{ display:flex; gap:8px; font-size:13.5px; line-height:1.8; margin-bottom:16px; }
+  .ov-catline:last-child{ margin-bottom:0; }
+  .ov-catlabel{ flex-shrink:0; font-weight:700; width:82px; align-content: center;}
+  .ov-catlabel.hw{ color:var(--hw); }
+  .ov-catlabel.mat{ color:var(--mat); }
+  .ov-catlabel.sonst{ color:var(--sonst); }
+  .ov-catvalue{ color:var(--ink); }
+  .ov-datechip{
+    display: inline-block;
+    background: #616161;
+    color: white;
+    font-size: 11px;
+    /* font-weight: 500; */
+    padding: 2px 7px;
+    border-radius: 6px;
+    margin-right: 3px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: background .1s ease, color .1s ease;
+    border: 1px solid #616161;
+   }
+ .ov-datechip:hover{ /*filter:brightness(0.95);*/ }
+  .ov-datechip.done{
+    background: white;
+    color: gray;
+    border: 1px dashed;
+    /* font-weight: 500;*/
+  }
+  .ov-datechip.done::before{ content:"✓ "; }
+  .ov-emptynote{ font-size:12.5px; color:var(--muted); font-style:italic; }
+
+  /* ---- Übersicht: Legende ---- */
+  .ov-legend{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); margin-bottom:14px; }
+  .ov-legend .ov-legend-swatch{ display:inline-block; width:14px; height:14px; border-radius:4px; background:#DCEFE1; border:1px solid #B9DDC4; }
+
+  /* ---- Übersicht: Mündlich-Tabelle ---- */
+  .ov-tablewrap{ background:var(--surface); border:1px solid var(--line); border-radius:12px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .ov-table{ border-collapse:collapse; width:100%; min-width:420px; }
+  .ov-table thead th{
+    position:sticky; top:0; background:var(--surface);
+    text-align:center; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--muted); font-weight:700; padding:12px 10px; white-space:nowrap;
+    border-bottom:1.5px solid var(--line);
+  }
+  .ov-table thead th.ov-namehead{ text-align:left; position:sticky; left:0; z-index:2; background:var(--surface); }
+  .ov-table tbody td{ padding:10px; text-align:center; border-bottom:1px solid var(--line); font-size:13px; }
+  .ov-table tbody tr:nth-child(odd) td{ background:var(--stripe); }
+  .ov-table tbody tr:nth-child(even) td{ background:var(--surface); }
+  .ov-table td.ov-namecell{
+    position:sticky; left:0; z-index:1; text-align:left; font-weight:700; white-space:nowrap;
+    border-right:1px solid var(--line); background:inherit;
+  }
+  .ov-table td.ov-avgcell{ font-weight:800; }
+  .ov-cellpill{ display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; font-size:10.5px; font-weight:800; }
+  .ov-cellpill.v1{ background:#2F7A4C; color:#fff; }
+  .ov-cellpill.v2{ background:#8FC79B; color:#1F4A2C; }
+  .ov-cellpill.v3{ background:#D8D2BF; color:#5C5540; }
+  .ov-cellpill.v4{ background:#E3A574; color:#5C3313; }
+  .ov-cellpill.v5{ background:#C0453A; color:#fff; }
+  .ov-empty-dash{ color:var(--line); }
+
+  /* Übersicht als zentriertes Pop-up */
+  .sheetoverlay{
+    position:fixed; inset:0; background:rgba(27,28,25,0.4);
+    display:none; align-items:center; justify-content:center; z-index:25; padding:24px;
+  }
+  .sheetoverlay.show{ display:flex; }
+  .sheet{
+    background:var(--bg); width:100%; max-width:640px; max-height:82vh;
+    border-radius:20px; padding:20px 20px 24px; overflow-y:auto;
+    box-shadow:0 20px 60px rgba(20,19,15,0.28);
+  }
+  .sheet h2{ margin:0 0 12px; font-size:18px; }
+  .sheet .close{ float:right; background:none; border:none; font-size:16px; color:var(--muted); cursor:pointer; }
+  .sheet .print-btn{
+    float:right; margin-right:14px; background:var(--surface); border:1px solid var(--line);
+    border-radius:8px; font-size:13px; font-weight:700; color:var(--ink); cursor:pointer;
+    padding:7px 12px;
+  }
+  .sheet .print-btn:hover{ background:var(--stripe); }
+  .summary-row{ border-bottom:1px solid var(--line); padding:12px 2px; }
+  .summary-row .nm{ font-weight:700; font-size:15px; margin-bottom:4px; }
+  .summary-row .avg{ font-size:13px; font-weight:700; color:var(--ink); margin-bottom:4px; }
+  .summary-row .avg .sub{ font-weight:500; color:var(--muted); }
+  .summary-row .entries{ font-size:13px; color:var(--muted); line-height:1.7; }
+  .tag{ display:inline-block; padding:2px 8px; border-radius:8px; font-size:12px; font-weight:600; margin-right:6px; }
+  .tag.hw{ background:#F5E3D8; color:var(--hw); }
+  .tag.mat{ background:#E4EFEC; color:var(--mat); }
+  .tag.sonst{ background:#E6ECF3; color:var(--sonst); }
+  .tag.muendl{ background:#EFE9DC; color:#5C5540; }
+  .note-text{ font-style:italic; }
+
+  /* Toast */
+  .toast{
+    position:fixed; top:14px; left:50%; transform:translateX(-50%) translateY(-12px);
+    background:var(--ink); color:#fff; padding:10px 10px 10px 16px; border-radius:12px;
+    display:flex; align-items:center; gap:12px; font-size:13.5px; font-weight:600;
+    box-shadow:0 8px 24px rgba(0,0,0,0.18); z-index:40; opacity:0; pointer-events:none;
+    transition:opacity .18s ease, transform .18s ease; max-width:calc(100vw - 32px); white-space:nowrap;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
+  .toast .undo{ background:rgba(255,255,255,0.16); border:none; color:#fff; font-size:13px; font-weight:700; padding:5px 12px; border-radius:8px; cursor:pointer; flex-shrink:0; }
+
+  /* ---- Druckansicht: Schüler-Kategorien-Blatt ---- */
+  #printArea{ display:none; }
+  .print-page{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    color:#1B1C19;
+  }
+  .print-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    border-bottom:2px solid #1B1C19; padding-bottom:10px; margin-bottom:2px;
+  }
+  .print-head .pname{ font-size:14pt; font-weight:700; }
+  .print-head .pdate{ font-size:9pt; color:#8B8A80; }
+  .print-sub{ font-size:9pt; color:#8B8A80; margin-bottom:20px; }
+  .print-catrow{
+    display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 8px;
+    margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #E6E3DB;
+  }
+  .print-catrow:last-of-type{ border-bottom:none; }
+  .print-catlabel{
+    font-size:10pt; font-weight:700; text-transform:uppercase; letter-spacing:0.03em;
+    width:82px; flex-shrink:0;
+  }
+  .print-chip{
+    display:inline-flex; align-items:center; gap:5px; border:1.3px solid #1B1C19;
+    background:#ffffff; border-radius:4px; padding:2px 7px; font-size:9.5pt; font-weight:600;
+  }
+  .print-chip.done{ border-style:dashed; }
+  .print-chip .note{ font-weight:400; }
+  .print-empty{ font-size:9.5pt; color:#8B8A80; font-style:italic; }
+  .print-legend{
+    display:flex; align-items:center; gap:14px; margin:18px 0 4px; padding-top:12px;
+    border-top:1px solid #E6E3DB; font-size:8.5pt; color:#8B8A80;
+  }
+  .print-legend .sw{ display:inline-block; width:11px; height:11px; border:1.3px solid #1B1C19; background:#fff; border-radius:3px; margin-right:4px; vertical-align:-1px; }
+  .print-legend .sw.done{ border-style:dashed; }
+  .print-foot{
+    display:flex; justify-content:space-between; margin-top:14px; padding-top:8px;
+    border-top:0.5px solid #E6E3DB; font-size:8pt; color:#B4B2A9;
+  }
+
+  @media print{
+    body *{ visibility:hidden; }
+    #printArea, #printArea *{ visibility:visible; }
+    #printArea{ display:block; position:absolute; top:0; left:0; width:100%; }
+    .print-page{ padding:14mm 12mm; }
+    @page{ size:A4; margin:0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="classpicker" id="classpicker">
+      <button class="classpicker-btn" id="classpickerBtn">
+        <span id="classpickerLabel">Beispiel-Klasse</span>
+        <span class="chev">▾</span>
+      </button>
+      <div class="classpicker-menu" id="classpickerMenu"></div>
+    </div>
+  </div>
+  <div class="header-controls">
+    <div class="muendl-toggle-wrap" title="Mündlich-Spalte ein-/ausblenden">
+      <span class="toggle-label">Mündlich</span>
+      <label class="switch">
+        <input type="checkbox" id="muendlToggle" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="datepicker">
+      <span class="weekday" id="weekdayLabel"></span>
+      <input type="date" id="datePicker">
+      <button class="today-btn" id="todayBtn">Heute</button>
+    </div>
+    <button class="settings-btn" id="settingsBtn" title="Einstellungen">⚙️</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <table>
+    <thead>
+      <tr>
+        <th class="namehead">Schüler</th>
+        <th><span class="icon">📕</span>HA</th>
+        <th><span class="icon">🎒</span>Material</th>
+        <th><span class="icon">💬</span>Sonstiges</th>
+        <th class="muendl-col"><span class="icon">🗣️</span>Mündlich</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="bottombar">
+  <button class="btn primary" id="overviewBtn">Übersicht</button>
+</div>
+
+<footer>Alle Daten bleiben lokal auf diesem Gerät.</footer>
+
+<div class="toast" id="toast">
+  <span id="toastMsg"></span>
+  <button class="undo" id="toastUndo">Rückgängig</button>
+</div>
+
+<div class="overlay" id="matOverlay">
+  <div class="popover" id="matPopover"></div>
+</div>
+
+<div class="overlay" id="importOverlay">
+  <div class="popover" id="importPopover">
+    <h3>CSV importieren</h3>
+    <p id="importSummary" style="font-size:12.5px; color:var(--muted); margin:-4px 0 14px; line-height:1.5;"></p>
+    <button class="optbtn" id="importMergeBtn">
+      <span class="oicon">➕</span>
+      <span>Ergänzen — vorhandene Einträge bleiben erhalten, neue werden hinzugefügt/aktualisiert</span>
+    </button>
+    <button class="optbtn" id="importOverwriteBtn">
+      <span class="oicon">♻️</span>
+      <span>Überschreiben — alle aktuellen Einträge werden gelöscht und durch die CSV-Daten ersetzt</span>
+    </button>
+    <button class="closebtn" id="importCancelBtn">Abbrechen</button>
+  </div>
+</div>
+
+<div class="overlay" id="settingsOverlay">
+  <div class="settings-panel">
+    <button class="close" id="closeSettings">Schließen ✕</button>
+    <h2>Einstellungen</h2>
+
+    <div class="settings-tabs" id="settingsTabs">
+      <button class="active" data-tab="general">Klassen &amp; Schüler</button>
+      <button data-tab="sonst">Vorschläge</button>
+      <button data-tab="daten">Daten</button>
+    </div>
+
+    <div class="settings-tabpanel" id="tabGeneral">
+      <div class="settings-section">
+        <h3>Klassen</h3>
+        <div id="classList"></div>
+        <div class="addrow">
+          <input type="text" id="newClassInput" placeholder="Neue Klasse, z. B. 9a">
+          <button id="addClassBtn">Anlegen</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Schüler in <span id="pupilSectionClass"></span></h3>
+        <div id="pupilList"></div>
+        <div class="addrow">
+          <input type="text" id="newPupilInput" placeholder="Name, z. B. Mika L.">
+          <button id="addPupilBtn">Hinzufügen</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-tabpanel" id="tabSonst" style="display:none;">
+      <div class="settings-section" style="margin-top:14px;">
+        <h3>Vorschläge für „Material"</h3>
+        <div id="matSuggestionList"></div>
+        <div class="addrow">
+          <input type="text" id="newMatSuggestionInput" placeholder="z. B. Taschenrechner">
+          <button id="addMatSuggestionBtn">Hinzufügen</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Vorschläge für „Sonstiges"</h3>
+        <div id="suggestionList"></div>
+        <div class="addrow">
+          <input type="text" id="newSuggestionInput" placeholder="z. B. Kaugummi im Unterricht">
+          <button id="addSuggestionBtn">Hinzufügen</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-tabpanel" id="tabDaten" style="display:none;">
+      <div class="settings-section" style="margin-top:14px;">
+        <h3>Daten-Export</h3>
+        <p style="font-size:12.5px; color:var(--muted); margin:0 0 10px;">Exportiert alle Einträge aller Klassen als CSV-Datei (öffenbar in Excel, Numbers, Google Sheets).</p>
+        <button id="exportCsvBtn" class="today-btn" style="padding:9px 14px;">CSV exportieren</button>
+      </div>
+
+      <div class="settings-section">
+        <h3>Daten-Import</h3>
+        <p style="font-size:12.5px; color:var(--muted); margin:0 0 10px;">Importiert eine CSV-Datei im selben Format wie der Export (Spalten: Klasse; Datum; Schüler; Kategorie; Wert; Erledigt). Um Schüler per CSV zu importieren: CSV exportieren und die Schülernamen </p>
+        <button id="importCsvBtn" class="today-btn" style="padding:9px 14px;">CSV importieren</button>
+        <input type="file" id="importCsvInput" accept=".csv,text/csv" style="display:none;">
+      </div>
+
+      <div class="settings-section">
+        <h3 style="color:#B5502A;">Alle Daten löschen</h3>
+        <p style="font-size:12.5px; color:var(--muted); margin:0 0 10px;">Löscht unwiderruflich alle Klassen, Schüler und Einträge auf diesem Gerät. Vorher ggf. CSV exportieren, um eine Sicherung zu behalten.</p>
+        <button id="deleteAllBtn" class="today-btn" style="padding:9px 14px; background:#B5502A; color:#fff; border-color:#B5502A;">Alle Daten löschen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sheetoverlay" id="overviewOverlay">
+  <div class="sheet">
+    <button class="close" id="closeOverview">Schließen ✕</button>
+    <button class="print-btn" id="printOverviewBtn" style="display:none;" title="Kategorien-Übersicht drucken">🖨️ Drucken</button>
+    <h2 id="overviewTitle">Übersicht</h2>
+    <div class="ov-toggle" id="ovToggle">
+      <button class="active" data-view="cat">Kategorien</button>
+      <button data-view="muendl">Mündlich</button>
+    </div>
+    <div class="ov-legend" id="ovLegend"><span class="ov-legend-swatch"></span>Grün = erledigt (zum Markieren auf ein Datum tippen)</div>
+    <div class="ov-panel" id="ovCatPanel"></div>
+    <div class="ov-panel" id="ovMuendlPanel" style="display:none;"></div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+  // ---- Klassen & Schülerlisten ----
+  const DEFAULT_PUPILS = [
+    "Anna B.", "Ben K.", "Clara S."
+  ];
+
+  let pupils = []; // zeigt immer auf die Schülerliste der aktiven Klasse (gleiche Array-Referenz)
+
+  const DEFAULT_MAT_OPTIONS = [
+    { key:"stifte", label:"Stifte", icon:"✏️" },
+    { key:"heft", label:"Heft", icon:"📗" },
+    { key:"buch", label:"Buch", icon:"📘" },
+    { key:"planner", label:"Planner", icon:"🗓️" },
+    { key:"geodreieck", label:"Geodr.", icon:"📐" },
+    { key:"taschenrechner", label:"Taschenrechner", icon:"📱" }
+  ];
+  const MAT_OPTIONS_KEY = "klassentool_mat_optionen_v1";
+  function loadMatOptions(){
+    try{
+      const raw = localStorage.getItem(MAT_OPTIONS_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        if(Array.isArray(parsed) && parsed.length) return parsed;
+      }
+    }catch(e){}
+    return DEFAULT_MAT_OPTIONS.map(o => ({...o}));
+  }
+  function saveMatOptions(){
+    try{ localStorage.setItem(MAT_OPTIONS_KEY, JSON.stringify(matOptions)); }
+    catch(e){}
+  }
+  function sortMatOptions(){ matOptions.sort((a,b) => a.label.localeCompare(b.label, "de")); }
+  function rebuildMatByKey(){
+    Object.keys(matByKey).forEach(k => delete matByKey[k]);
+    matOptions.forEach(o => matByKey[o.key] = o);
+  }
+  function slugify(str){
+    const map = { ä:"ae", ö:"oe", ü:"ue", ß:"ss" };
+    return (str.toLowerCase().replace(/[äöüß]/g, m => map[m]).replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")) || "option";
+  }
+  function uniqueMatKey(base){
+    const existing = new Set(matOptions.map(o => o.key));
+    let key = slugify(base);
+    let i = 2;
+    while(existing.has(key)){ key = slugify(base) + "-" + i; i++; }
+    return key;
+  }
+
+  let matOptions = loadMatOptions();
+  sortMatOptions();
+  const matByKey = {};
+  rebuildMatByKey();
+
+  const DEFAULT_SONST_VORSCHLAEGE = [
+    "Aufgabe nicht erledigt",
+    "Auszeit"
+  ];
+  const SUGGESTIONS_KEY = "klassentool_sonst_vorschlaege_v1";
+  function loadSuggestions(){
+    try{
+      const raw = localStorage.getItem(SUGGESTIONS_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        if(Array.isArray(parsed)) return parsed;
+      }
+    }catch(e){}
+    return [...DEFAULT_SONST_VORSCHLAEGE];
+  }
+  function saveSuggestions(){
+    try{ localStorage.setItem(SUGGESTIONS_KEY, JSON.stringify(sonstVorschlaege)); }
+    catch(e){}
+  }
+  function sortSuggestions(){ sonstVorschlaege.sort((a,b) => a.localeCompare(b, "de")); }
+  let sonstVorschlaege = loadSuggestions();
+  sortSuggestions();
+
+  const pillDefs = [
+    { value:1, label:"++" },
+    { value:2, label:"+" },
+    { value:3, label:"0" },
+    { value:4, label:"-" },
+    { value:5, label:"--" }
+  ];
+
+  const STORAGE_KEY = "klassentool_klassen_v1";
+  const OLD_STORAGE_KEY = "klassentool_daten_datenraster_v1"; // Daten aus der Einzelklassen-Version
+
+  function todayISO(){ return new Date().toISOString().slice(0,10); }
+  function weekdayLabelFor(iso){
+    return new Date(iso + "T12:00").toLocaleDateString("de-DE", { weekday:'long' });
+  }
+  function shortDate(iso){
+    return new Date(iso + "T12:00").toLocaleDateString("de-DE", { day:'2-digit', month:'2-digit' });
+  }
+  function dateSuffix(date){
+    if(date === todayISO()) return "";
+    return ` (${shortDate(date)})`;
+  }
+
+  function emptyDay(){ return { hw:[], mat:{}, sonst:{}, muendl:{} }; }
+
+  function loadClasses(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        if(parsed && Array.isArray(parsed.classes) && parsed.classes.length){
+          return parsed;
+        }
+      }
+    }catch(e){}
+
+    // Migration: Daten aus der alten Version ohne Klassenverwaltung übernehmen
+    let migratedData = {};
+    try{
+      const oldRaw = localStorage.getItem(OLD_STORAGE_KEY);
+      if(oldRaw) migratedData = JSON.parse(oldRaw) || {};
+    }catch(e){}
+
+    return {
+      classes: [{ id:"c1", name:"Beispiel-Klasse", pupils:[...DEFAULT_PUPILS], data: migratedData }],
+      activeClassId: "c1"
+    };
+  }
+
+  function saveClasses(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({ classes, activeClassId })); }
+    catch(e){}
+  }
+  function saveData(){ saveClasses(); } // Alias, damit bestehende Aufrufe unverändert bleiben
+
+  function getClass(id){ return classes.find(c => c.id === id); }
+  function activeClass(){ return getClass(activeClassId); }
+  function sortClasses(){ classes.sort((a,b) => a.name.localeCompare(b.name, "de")); }
+  function sortPupils(c){ c.pupils.sort((a,b) => a.localeCompare(b, "de")); }
+
+  const loaded = loadClasses();
+  let classes = loaded.classes;
+  let activeClassId = loaded.activeClassId;
+  classes.forEach(c => { if(!c.data) c.data = {}; });
+  sortClasses();
+  classes.forEach(sortPupils);
+
+  let nextClassNum = classes.reduce((max, c) => {
+    const m = /^c(\d+)$/.exec(c.id);
+    return m ? Math.max(max, parseInt(m[1], 10)) : max;
+  }, 0) + 1;
+
+  function ensureDay(date){
+    if(!data[date]) data[date] = emptyDay();
+    if(!data[date].mat) data[date].mat = {};
+    if(!data[date].sonst) data[date].sonst = {};
+    if(!data[date].muendl) data[date].muendl = {};
+    if(!data[date].done) data[date].done = {};
+    if(!data[date].done.hw) data[date].done.hw = [];
+    if(!data[date].done.mat) data[date].done.mat = [];
+    if(!data[date].done.sonst) data[date].done.sonst = [];
+  }
+
+  // ---- Übersicht: "erledigt"-Status pro Eintrag (Kategorie + Schüler + Datum) ----
+  function isEntryDone(cat, date, pupil){
+    const day = data[date];
+    return !!(day && day.done && day.done[cat] && day.done[cat].includes(pupil));
+  }
+
+  function toggleEntryDone(cat, date, pupil){
+    ensureDay(date);
+    const list = data[date].done[cat];
+    const idx = list.indexOf(pupil);
+    if(idx === -1) list.push(pupil);
+    else list.splice(idx, 1);
+    saveData();
+  }
+
+  let data; // zeigt immer auf data-Objekt der aktiven Klasse (gleiche Objekt-Referenz)
+  let selectedDate = todayISO();
+  function currentDate(){ return selectedDate; }
+
+  function dayFor(date){ return data[date] || emptyDay(); }
+
+  function activateClass(id){
+    activeClassId = id;
+    pupils = activeClass().pupils;
+    data = activeClass().data;
+  }
+  activateClass(activeClassId);
+
+  // ---- Toast + Undo ----
+  let toastTimer = null;
+  let lastAction = null;
+  function showToast(message, undoFn){
+    const toast = document.getElementById("toast");
+    document.getElementById("toastMsg").textContent = message;
+    lastAction = { undo: undoFn };
+    document.getElementById("toastUndo").style.display = undoFn ? "" : "none";
+    toast.classList.add("show");
+    if(toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.classList.remove("show"); lastAction = null; }, 3000);
+  }
+  document.getElementById("toastUndo").addEventListener("click", () => {
+    if(lastAction && lastAction.undo) lastAction.undo();
+    document.getElementById("toast").classList.remove("show");
+    if(toastTimer) clearTimeout(toastTimer);
+    lastAction = null;
+  });
+
+  // ---- Aktionen ----
+  function toggleHW(p){
+    const date = currentDate();
+    ensureDay(date);
+    const list = data[date].hw;
+    const idx = list.indexOf(p);
+    if(idx === -1){
+      list.push(p);
+      saveData(); renderTable();
+      showToast(`Eintrag "HA" für ${p} hinzugefügt${dateSuffix(date)}`, () => {
+        const d = data[date].hw;
+        const i = d.indexOf(p);
+        if(i !== -1) d.splice(i,1);
+        saveData(); renderTable();
+      });
+    } else {
+      list.splice(idx,1);
+      saveData(); renderTable();
+    }
+  }
+
+  function openMatPopover(p){
+    const date = currentDate();
+    ensureDay(date);
+    const current = data[date].mat[p] || null;
+    const pop = document.getElementById("matPopover");
+    pop.innerHTML = `
+      <h3>Material — ${p}</h3>
+      ${matOptions.map(o => `
+        <button class="optbtn ${current===o.key?'selected':''}" data-key="${o.key}">
+          <span class="oicon">${o.icon}</span>${o.label}
+        </button>
+      `).join("")}
+      <button class="closebtn" id="matClose">Schließen</button>
+    `;
+    pop.querySelectorAll(".optbtn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.key;
+        const prev = data[date].mat[p] || null;
+        if(prev === key){
+          delete data[date].mat[p];
+          saveData(); renderTable();
+        } else {
+          data[date].mat[p] = key;
+          saveData(); renderTable();
+          showToast(`Material "${matByKey[key].label}" für ${p} eingetragen${dateSuffix(date)}`, () => {
+            if(prev === null) delete data[date].mat[p];
+            else data[date].mat[p] = prev;
+            saveData(); renderTable();
+          });
+        }
+        document.getElementById("matOverlay").classList.remove("show");
+      });
+    });
+    document.getElementById("matClose").addEventListener("click", () => {
+      document.getElementById("matOverlay").classList.remove("show");
+    });
+    document.getElementById("matOverlay").classList.add("show");
+  }
+  document.getElementById("matOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "matOverlay") document.getElementById("matOverlay").classList.remove("show");
+  });
+
+  function updateNote(p, value, inputEl){
+    const date = currentDate();
+    ensureDay(date);
+    data[date].sonst[p] = value;
+    saveData();
+    inputEl.classList.toggle("filled", value.trim() !== "");
+  }
+
+  function setMuendl(p, value){
+    const date = currentDate();
+    ensureDay(date);
+    const map = data[date].muendl;
+    const prev = map.hasOwnProperty(p) ? map[p] : null;
+    if(prev === value){
+      delete map[p];
+      saveData(); renderTable();
+      return;
+    }
+    map[p] = value;
+    saveData(); renderTable();
+    const label = pillDefs.find(d => d.value === value).label;
+    showToast(`Bewertung "${label}" für ${p} gesetzt${dateSuffix(date)}`, () => {
+      if(prev === null) delete data[date].muendl[p];
+      else data[date].muendl[p] = prev;
+      saveData(); renderTable();
+    });
+  }
+
+  // ---- Rendering ----
+  function renderTable(){
+    const day = dayFor(currentDate());
+    const tbody = document.getElementById("tbody");
+    tbody.innerHTML = "";
+
+    pupils.forEach((p, i) => {
+      const hwOn = day.hw.includes(p);
+      const matKey = day.mat[p];
+      const matOpt = matKey ? matByKey[matKey] : null;
+      const note = day.sonst[p] || "";
+      const muendlVal = day.muendl.hasOwnProperty(p) ? day.muendl[p] : null;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="namecell" data-p="${p}" style="cursor:pointer;"><span class="num">${String(i+1).padStart(2,"0")}</span>${p}</td>
+        <td class="dotcell"><span class="dot ${hwOn?'on':''}" data-action="hw" data-p="${p}">HA</span>
+        </td>
+        <td class="matcell">
+          <div class="matinner" data-action="mat" data-p="${p}">
+            ${matOpt ? `<span class="matlabel">${matOpt.icon} ${matOpt.label}</span>` : `<span class="dot_mat">+</span>`}
+          </div>
+        </td>
+
+<!--
+        <td class="sonstcell">
+          <input class="noteinput ${note.trim()!==''?'filled':''}" data-action="note" data-p="${p}" placeholder="" value="${note}">
+        </td>
+-->
+
+        <td class="sonstcell">
+          <div class="note-wrap">
+            <input
+              class="noteinput ${note.trim()!==''?'filled':''}"
+              data-action="note"
+              data-p="${p}"
+              placeholder=""
+              value="${escapeHTML(note)}"
+              autocomplete="off"
+            >
+
+            <div class="note-suggestions" data-suggestions-for="${p}">
+            </div>
+          </div>
+        </td>
+
+
+
+
+        <td class="muendlcell muendl-col">
+          <div class="pillrow" data-p="${p}">
+            ${pillDefs.map(d => `<button class="pill p${d.value} ${muendlVal===d.value?'on':''}" data-action="muendl" data-p="${p}" data-v="${d.value}">${d.label}</button>`).join("")}
+          </div>
+        </td>
+        <td></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll(".namecell").forEach(el => {
+      el.addEventListener("click", () => openOverview(el.dataset.p));
+    });
+    tbody.querySelectorAll("[data-action='hw']").forEach(el => {
+      el.addEventListener("click", () => toggleHW(el.dataset.p));
+    });
+    tbody.querySelectorAll("[data-action='mat']").forEach(el => {
+      el.addEventListener("click", () => openMatPopover(el.dataset.p));
+    });
+
+
+    tbody.querySelectorAll("[data-action='note']").forEach(input => {
+      input.addEventListener("focus", () => {
+        showNoteSuggestions(input);
+      });
+      input.addEventListener("input", () => {
+        updateNote(input.dataset.p, input.value, input);
+        showNoteSuggestions(input);
+      });
+      input.addEventListener("keydown", (e) => {
+        handleNoteKeydown(e, input);
+      });
+      input.addEventListener("blur", () => {
+  setTimeout(() => {
+    const box = input.closest(".note-wrap")
+                     .querySelector(".note-suggestions");
+
+    box.classList.remove("show");
+  }, 150)});
+    });
+
+
+    tbody.querySelectorAll("[data-action='muendl']").forEach(el => {
+      el.addEventListener("click", () => setMuendl(el.dataset.p, Number(el.dataset.v)));
+    });
+  }
+
+  // ---- Übersicht ----
+  function chipDate(iso){ return shortDate(iso) + "."; }
+  function escapeHTML(str){
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function buildPerPupil(){
+    const per = {};
+    pupils.forEach(p => per[p] = { hw:[], mat:[], sonst:[], muendl:[] });
+    Object.keys(data).sort().forEach(date => {
+      const day = data[date];
+      (day.hw||[]).forEach(p => per[p] && per[p].hw.push(date));
+      Object.keys(day.mat||{}).forEach(p => per[p] && per[p].mat.push({ date, key: day.mat[p] }));
+      Object.keys(day.sonst||{}).forEach(p => per[p] && per[p].sonst.push({ date, note: day.sonst[p] }));
+      Object.keys(day.muendl||{}).forEach(p => per[p] && per[p].muendl.push({ date, value: day.muendl[p] }));
+    });
+    return per;
+  }
+
+  function renderCatView(filterPupil){
+    const perPupil = buildPerPupil();
+    const panel = document.getElementById("ovCatPanel");
+    panel.innerHTML = "";
+
+    let sortedPupils = filterPupil ? [filterPupil] : [...pupils].sort((a,b) => a.localeCompare(b, "de"));
+    const withAny = sortedPupils.filter(p => {
+      const e = perPupil[p];
+      return e.hw.length || e.mat.length || e.sonst.length || e.muendl.length;
+    });
+
+    if(withAny.length === 0){
+      panel.innerHTML = `<p style="color:var(--muted); font-size:14px;">Noch keine Einträge vorhanden.</p>`;
+      return;
+    }
+
+    withAny.forEach(p => {
+      const e = perPupil[p];
+      const block = document.createElement("div");
+      block.className = "ov-pupilblock";
+
+      let lines = "";
+      if(e.hw.length){
+        const vals = e.hw.map(d => `<span class="ov-datechip ${isEntryDone('hw', d, p)?'done':''}" data-cat="hw" data-date="${d}" data-p="${escapeHTML(p)}">${chipDate(d)}</span>`).join(" ");
+        lines += `<div class="ov-catline"><span class="ov-catlabel hw">HA</span><span class="ov-catvalue">${vals}</span></div>`;
+      }
+      if(e.mat.length){
+        const vals = e.mat.map(m => `<span class="ov-datechip ${isEntryDone('mat', m.date, p)?'done':''}" data-cat="mat" data-date="${m.date}" data-p="${escapeHTML(p)}">${chipDate(m.date)} ${(matByKey[m.key]&&matByKey[m.key].label) || m.key} </span>`).join(" ");
+        lines += `<div class="ov-catline"><span class="ov-catlabel mat">Material</span><span class="ov-catvalue">${vals}</span></div>`;
+      }
+      if(e.sonst.length){
+        const vals = e.sonst.map(s => `<span class="ov-datechip ${isEntryDone('sonst', s.date, p)?'done':''}" data-cat="sonst" data-date="${s.date}" data-p="${escapeHTML(p)}">${chipDate(s.date)} ${escapeHTML(s.note)} </span>`).join(" ");
+        lines += `<div class="ov-catline"><span class="ov-catlabel sonst">Sonstiges</span><span class="ov-catvalue">${vals}</span></div>`;
+      }
+      if(!e.hw.length && !e.mat.length && !e.sonst.length){
+        lines = `<div class="ov-emptynote">Nur mündliche Bewertungen – siehe Ansicht „Mündlich"</div>`;
+      }
+
+      block.innerHTML = `<div class="ov-pname">${p}</div>${lines}`;
+      panel.appendChild(block);
+    });
+  }
+
+  function renderMuendlView(filterPupil){
+    const perPupil = buildPerPupil();
+    const panel = document.getElementById("ovMuendlPanel");
+    panel.innerHTML = "";
+
+    const basePupils = filterPupil ? [filterPupil] : pupils;
+    const rows = basePupils.filter(p => perPupil[p].muendl.length > 0)
+                            .sort((a,b) => a.localeCompare(b, "de"));
+
+    if(rows.length === 0){
+      panel.innerHTML = `<p style="color:var(--muted); font-size:14px;">Noch keine mündlichen Bewertungen vorhanden.</p>`;
+      return;
+    }
+
+    const dateSet = new Set();
+    rows.forEach(p => perPupil[p].muendl.forEach(m => dateSet.add(m.date)));
+    const dates = [...dateSet].sort();
+
+    let thead = `<th class="ov-namehead">Schüler</th><th>Ø</th>`;
+    dates.forEach(d => thead += `<th>${chipDate(d)}</th>`);
+
+    let tbodyHTML = "";
+    rows.forEach(p => {
+      const entries = {};
+      perPupil[p].muendl.forEach(m => entries[m.date] = m.value);
+      const values = perPupil[p].muendl.map(m => m.value);
+      const avg = values.reduce((a,b)=>a+b,0) / values.length;
+
+      let tds = `<td class="ov-namecell">${p}</td><td class="ov-avgcell">${avg.toFixed(1)}</td>`;
+      dates.forEach(d => {
+        if(entries.hasOwnProperty(d)){
+          const v = entries[d];
+          const lbl = pillDefs.find(def => def.value === v).label;
+          tds += `<td><span class="ov-cellpill v${v}">${lbl}</span></td>`;
+        } else {
+          tds += `<td><span class="ov-empty-dash">–</span></td>`;
+        }
+      });
+      tbodyHTML += `<tr>${tds}</tr>`;
+    });
+
+    panel.innerHTML = `
+      <div class="ov-tablewrap">
+        <table class="ov-table">
+          <thead><tr>${thead}</tr></thead>
+          <tbody>${tbodyHTML}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  let currentOverviewPupil = null;
+
+  function openOverview(filterPupil){
+    currentOverviewPupil = filterPupil || null;
+    document.getElementById("overviewTitle").textContent = filterPupil ? `Übersicht — ${filterPupil}` : "Übersicht";
+    document.querySelectorAll("#ovToggle button").forEach(b => b.classList.remove("active"));
+    document.querySelector("#ovToggle button[data-view='cat']").classList.add("active");
+    document.getElementById("ovCatPanel").style.display = "block";
+    document.getElementById("ovMuendlPanel").style.display = "none";
+    renderCatView(filterPupil);
+    renderMuendlView(filterPupil);
+    document.getElementById("printOverviewBtn").style.display = filterPupil ? "" : "none";
+    document.getElementById("overviewOverlay").classList.add("show");
+  }
+
+  // ---- Druck: Kategorien-Übersicht eines einzelnen Schülers ----
+  function formatPrintDate(iso){
+    const d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString("de-DE", { day:"2-digit", month:"2-digit", year:"numeric" });
+  }
+
+  function printPupilOverview(pupil){
+    if(!pupil) return;
+    const perPupil = buildPerPupil();
+    const e = perPupil[pupil];
+    if(!e) return;
+
+    function chipsFor(cat, list, withNote){
+      if(!list.length) return "";
+      const chips = list.map(item => {
+        const date = withNote ? item.date : item;
+        const note = withNote ? (item.note || (matByKey[item.key] && matByKey[item.key].label) || item.key || "") : "";
+        const done = isEntryDone(cat, date, pupil);
+        return `<span class="print-chip ${done?'done':''}">${chipDate(date)}${note ? ` <span class="note">${escapeHTML(note)}</span>` : ""}</span>`;
+      }).join("");
+      return chips;
+    }
+
+    const hwChips = chipsFor("hw", e.hw, false);
+    const matChips = chipsFor("mat", e.mat, true);
+    const sonstChips = chipsFor("sonst", e.sonst, true);
+
+    let rows = "";
+    if(hwChips) rows += `<div class="print-catrow"><span class="print-catlabel" style="color:#B5502A;">Hausaufg.</span>${hwChips}</div>`;
+    if(matChips) rows += `<div class="print-catrow"><span class="print-catlabel" style="color:#3E6E52;">Material</span>${matChips}</div>`;
+    if(sonstChips) rows += `<div class="print-catrow"><span class="print-catlabel" style="color:#3B5C86;">Sonstiges</span>${sonstChips}</div>`;
+    if(!rows) rows = `<p class="print-empty">Noch keine Einträge vorhanden.</p>`;
+
+    const cls = activeClass();
+    const today = new Date().toLocaleDateString("de-DE", { day:"2-digit", month:"2-digit", year:"numeric" });
+
+    document.getElementById("printArea").innerHTML = `
+      <div class="print-page">
+        <div class="print-head">
+          <div class="pname">${escapeHTML(pupil)}</div>
+          <div class="pdate">Stand: ${today}</div>
+        </div>
+        <div class="print-sub">${escapeHTML(cls ? cls.name : "")} · Übersicht</div>
+        ${rows}
+        <div class="print-legend">
+          <span><span class="sw done"></span>erledigt (gestrichelt)</span>
+          <span><span class="sw"></span>offen (durchgezogen)</span>
+        </div>
+        <div class="print-foot">
+          <span>Erstellt mit Klassentool</span>
+          <span>Seite 1 von 1</span>
+        </div>
+      </div>
+    `;
+    window.print();
+  }
+
+  document.getElementById("printOverviewBtn").addEventListener("click", () => {
+    printPupilOverview(currentOverviewPupil);
+  });
+
+  function showNoteSuggestions(input) {
+      const wrap = input.closest(".note-wrap");
+      const box = wrap.querySelector(".note-suggestions");
+
+      const search = input.value.trim().toLocaleLowerCase("de");
+
+      const matches = sonstVorschlaege.filter(v =>
+        v.toLocaleLowerCase("de").includes(search)
+      );
+
+      box.innerHTML = "";
+
+      matches.forEach((value, index) => {
+        const btn = document.createElement("button");
+
+        btn.type = "button";
+        btn.className = "note-suggestion";
+        btn.textContent = value;
+
+        btn.addEventListener("mousedown", (e) => {
+          // verhindert, dass das Input durch den Klick vorher den Fokus verliert
+          e.preventDefault();
+
+          input.value = value;
+          updateNote(input.dataset.p, value, input);
+
+          box.classList.remove("show");
+          input.focus();
+        });
+
+        box.appendChild(btn);
+      });
+
+      box.classList.toggle("show", matches.length > 0);
+    }
+
+  document.querySelectorAll("#ovToggle button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#ovToggle button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const view = btn.dataset.view;
+      document.getElementById("ovCatPanel").style.display = view === "cat" ? "block" : "none";
+      document.getElementById("ovMuendlPanel").style.display = view === "muendl" ? "block" : "none";
+      document.getElementById("ovLegend").style.display = view === "cat" ? "flex" : "none";
+    });
+  });
+
+  // ---- Übersicht: Datum-Chip antippen -> als erledigt markieren/entmarkieren ----
+  document.getElementById("ovCatPanel").addEventListener("click", (e) => {
+    const chip = e.target.closest(".ov-datechip");
+    if(!chip) return;
+    const { cat, date, p } = chip.dataset;
+    toggleEntryDone(cat, date, p);
+    chip.classList.toggle("done");
+  });
+
+  document.getElementById("overviewBtn").addEventListener("click", () => openOverview(null));
+  document.getElementById("closeOverview").addEventListener("click", () => {
+    document.getElementById("overviewOverlay").classList.remove("show");
+  });
+  document.getElementById("overviewOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "overviewOverlay") document.getElementById("overviewOverlay").classList.remove("show");
+  });
+
+  // ---- Datumsauswahl ----
+  const datePicker = document.getElementById("datePicker");
+  const weekdayLabel = document.getElementById("weekdayLabel");
+  const todayBtn = document.getElementById("todayBtn");
+
+  function applyDate(iso){
+    selectedDate = iso;
+    datePicker.value = iso;
+    weekdayLabel.textContent = weekdayLabelFor(iso);
+    todayBtn.disabled = (iso === todayISO());
+    renderTable();
+  }
+  datePicker.addEventListener("change", () => { if(datePicker.value) applyDate(datePicker.value); });
+  todayBtn.addEventListener("click", () => applyDate(todayISO()));
+
+  // ---- Mündlich-Spalte ein-/ausblenden ----
+  const MUENDL_VISIBLE_KEY = "klassentool_muendl_sichtbar";
+  const muendlToggle = document.getElementById("muendlToggle");
+  function applyMuendlVisibility(visible){
+    document.body.classList.toggle("hide-muendl", !visible);
+  }
+  const storedVisible = localStorage.getItem(MUENDL_VISIBLE_KEY);
+  const initialVisible = storedVisible === null ? true : storedVisible === "1";
+  muendlToggle.checked = initialVisible;
+  applyMuendlVisibility(initialVisible);
+  muendlToggle.addEventListener("change", () => {
+    applyMuendlVisibility(muendlToggle.checked);
+    localStorage.setItem(MUENDL_VISIBLE_KEY, muendlToggle.checked ? "1" : "0");
+  });
+
+  // ---- Klassen-Dropdown im Header ----
+  const classpicker = document.getElementById("classpicker");
+  const classpickerBtn = document.getElementById("classpickerBtn");
+  const classpickerMenu = document.getElementById("classpickerMenu");
+  const classpickerLabel = document.getElementById("classpickerLabel");
+
+  function renderClasspickerMenu(){
+    classpickerMenu.innerHTML = "";
+    classes.forEach(c => {
+      const item = document.createElement("div");
+      item.className = "classpicker-item" + (c.id === activeClassId ? " active" : "");
+      item.innerHTML = `
+        <span>${c.id === activeClassId ? '<span class="check">✓</span> ' : ''}${escapeHTML(c.name)}</span>
+        <span class="count">${c.pupils.length}</span>
+      `;
+      item.addEventListener("click", () => {
+        closeClasspicker();
+        switchToClass(c.id);
+      });
+      classpickerMenu.appendChild(item);
+    });
+    const divider = document.createElement("div");
+    divider.className = "classpicker-divider";
+    classpickerMenu.appendChild(divider);
+
+    const manageBtn = document.createElement("button");
+    manageBtn.className = "classpicker-manage";
+    manageBtn.textContent = "⚙️ Klassen verwalten …";
+    manageBtn.addEventListener("click", () => {
+      closeClasspicker();
+      openSettings();
+    });
+    classpickerMenu.appendChild(manageBtn);
+  }
+
+  function openClasspicker(){
+    renderClasspickerMenu();
+    classpickerMenu.classList.add("show");
+    classpickerBtn.classList.add("open");
+  }
+  function closeClasspicker(){
+    classpickerMenu.classList.remove("show");
+    classpickerBtn.classList.remove("open");
+  }
+  classpickerBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if(classpickerMenu.classList.contains("show")) closeClasspicker();
+    else openClasspicker();
+  });
+  document.addEventListener("click", (e) => {
+    if(!classpicker.contains(e.target)) closeClasspicker();
+  });
+
+  // Wechselt die aktive Klasse und aktualisiert Tabelle, Datum bleibt erhalten
+  function switchToClass(id){
+    if(activeClassId === id) return;
+    activateClass(id);
+    saveClasses();
+    refreshChrome();
+  }
+
+  // Nach jeder Änderung an Klassen/Schülern: Kopfzeile, Tabelle und ggf. offene Einstellungen aktualisieren
+  function refreshChrome(){
+    classpickerLabel.textContent = activeClass().name;
+    renderTable();
+    if(document.getElementById("settingsOverlay").classList.contains("show")){
+      renderClassSettingsList();
+      renderPupilSettingsList();
+    }
+  }
+
+  // ---- Einstellungen: Klassen verwalten ----
+  function renderClassSettingsList(){
+    const list = document.getElementById("classList");
+    list.innerHTML = "";
+    classes.forEach(c => {
+      const row = document.createElement("div");
+      row.className = "listrow" + (c.id === activeClassId ? " activerow" : "");
+      row.style.cursor = "pointer";
+
+      const label = document.createElement("span");
+      label.className = "rowlabel" + (c.id === activeClassId ? " activeclass" : "");
+      label.textContent = c.name;
+      label.title = "Antippen, um diese Klasse auszuwählen";
+      row.appendChild(label);
+
+      row.addEventListener("click", () => {
+        if(activeClassId !== c.id){
+          activateClass(c.id);
+          saveClasses();
+          refreshChrome();
+        }
+      });
+
+      if(c.id === activeClassId){
+        const badge = document.createElement("span");
+        badge.className = "badge-active";
+        badge.textContent = "aktiv";
+        row.appendChild(badge);
+      }
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "iconbtn";
+      editBtn.textContent = "✎";
+      editBtn.title = "Umbenennen";
+      editBtn.addEventListener("click", (e) => { e.stopPropagation(); startRenameClass(row, c); });
+      row.appendChild(editBtn);
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "iconbtn danger";
+      delBtn.textContent = "×";
+      delBtn.title = "Klasse löschen";
+      delBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if(classes.length <= 1) return; // mindestens eine Klasse muss bleiben
+        if(!confirm(`Klasse „${c.name}" inkl. Schülerliste und Einträgen wirklich löschen?`)) return;
+        classes = classes.filter(x => x.id !== c.id);
+        if(activeClassId === c.id) activateClass(classes[0].id);
+        saveClasses();
+        refreshChrome();
+      });
+      row.appendChild(delBtn);
+
+      list.appendChild(row);
+    });
+  }
+
+  function startRenameClass(row, c){
+    if(row.querySelector("input")) return;
+    const label = row.querySelector(".rowlabel");
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "editfield";
+    input.value = c.name;
+    label.replaceWith(input);
+    input.focus();
+    input.select();
+
+    const commit = () => {
+      const val = input.value.trim();
+      if(val) c.name = val;
+      sortClasses();
+      saveClasses();
+      refreshChrome();
+    };
+    input.addEventListener("keydown", (e) => { if(e.key === "Enter") input.blur(); });
+    input.addEventListener("blur", commit);
+  }
+
+  document.getElementById("addClassBtn").addEventListener("click", addClass);
+  document.getElementById("newClassInput").addEventListener("keydown", (e) => { if(e.key === "Enter") addClass(); });
+  function addClass(){
+    const input = document.getElementById("newClassInput");
+    const name = input.value.trim();
+    if(!name) return;
+    const id = "c" + (nextClassNum++);
+    classes.push({ id, name, pupils: [], data: {} });
+    sortClasses();
+    activateClass(id);
+    saveClasses();
+    input.value = "";
+    refreshChrome();
+  }
+
+  // ---- Einstellungen: Schüler verwalten ----
+  function renderPupilSettingsList(){
+    document.getElementById("pupilSectionClass").textContent = activeClass().name;
+    const list = document.getElementById("pupilList");
+    list.innerHTML = "";
+    const c = activeClass();
+
+    if(c.pupils.length === 0){
+      list.innerHTML = `<div class="emptylist">Noch keine Schüler in dieser Klasse.</div>`;
+    }
+
+    c.pupils.forEach((p, idx) => {
+      const row = document.createElement("div");
+      row.className = "listrow";
+
+      const label = document.createElement("span");
+      label.className = "rowlabel";
+      label.textContent = p;
+      label.title = "Antippen zum Umbenennen";
+      label.addEventListener("click", () => startRenamePupil(row, c, idx));
+      row.appendChild(label);
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "iconbtn";
+      editBtn.textContent = "✎";
+      editBtn.title = "Umbenennen";
+      editBtn.addEventListener("click", () => startRenamePupil(row, c, idx));
+      row.appendChild(editBtn);
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "iconbtn danger";
+      delBtn.textContent = "×";
+      delBtn.title = "Schüler entfernen";
+      delBtn.addEventListener("click", () => {
+        if(!confirm(`„${p}" wirklich aus der Klasse entfernen?`)) return;
+        c.pupils.splice(idx, 1);
+        saveClasses();
+        refreshChrome();
+      });
+      row.appendChild(delBtn);
+
+      list.appendChild(row);
+    });
+  }
+
+  function startRenamePupil(row, c, idx){
+    if(row.querySelector("input")) return;
+    const label = row.querySelector(".rowlabel");
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "editfield";
+    input.value = c.pupils[idx];
+    label.replaceWith(input);
+    input.focus();
+    input.select();
+
+    const commit = () => {
+      const val = input.value.trim();
+      if(val) c.pupils[idx] = val;
+      sortPupils(c);
+      saveClasses();
+      refreshChrome();
+    };
+    input.addEventListener("keydown", (e) => { if(e.key === "Enter") input.blur(); });
+    input.addEventListener("blur", commit);
+  }
+
+  // ---- CSV-Export (alle Klassen, lange Liste: eine Zeile pro Eintrag) ----
+  function csvEscape(val){
+    const s = String(val === undefined || val === null ? "" : val);
+    if(/[;"\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function dayDoneFor(day, cat, pupil){
+    return !!(day.done && day.done[cat] && day.done[cat].includes(pupil));
+  }
+
+  async function exportAllDataCSV(){
+    const header = ["Klasse", "Datum", "Schüler", "Kategorie", "Wert", "Erledigt"];
+    const rows = [header];
+
+    classes.forEach(c => {
+      const clsData = c.data || {};
+      Object.keys(clsData).sort().forEach(date => {
+        const day = clsData[date];
+
+        (day.hw || []).forEach(p => {
+          rows.push([c.name, date, p, "HA vergessen", "", dayDoneFor(day, "hw", p) ? "Ja" : "Nein"]);
+        });
+
+        Object.keys(day.mat || {}).forEach(p => {
+          const key = day.mat[p];
+          const label = (matByKey[key] && matByKey[key].label) || key;
+          rows.push([c.name, date, p, "Material vergessen", label, dayDoneFor(day, "mat", p) ? "Ja" : "Nein"]);
+        });
+
+        Object.keys(day.sonst || {}).forEach(p => {
+          const note = day.sonst[p];
+          if(!note || !note.trim()) return;
+          rows.push([c.name, date, p, "Sonstiges", note, dayDoneFor(day, "sonst", p) ? "Ja" : "Nein"]);
+        });
+
+        Object.keys(day.muendl || {}).forEach(p => {
+          const v = day.muendl[p];
+          const def = pillDefs.find(d => d.value === v);
+          rows.push([c.name, date, p, "Mündlich", def ? def.label : v, ""]);
+        });
+      });
+    });
+
+    if(rows.length === 1){
+      showToast("Noch keine Daten zum Exportieren vorhanden.");
+      return;
+    }
+
+    const csvContent = rows.map(r => r.map(csvEscape).join(";")).join("\r\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const filename = `klassentool_export_${todayISO()}.csv`;
+
+    // Auf iOS/iPadOS (und anderen Geräten mit Web-Share-Unterstützung für Dateien)
+    // öffnet dies das native Teilen-Menü statt eines direkten Downloads.
+    try{
+      const file = new File([blob], filename, { type: "text/csv" });
+      if(navigator.canShare && navigator.canShare({ files: [file] })){
+        await navigator.share({ files: [file], title: "Klassentool-Export", text: filename });
+        return;
+      }
+    }catch(err){
+      if(err && err.name === "AbortError") return; // Nutzer hat das Teilen-Menü abgebrochen
+      // sonst: stillschweigend auf Download-Fallback zurückfallen
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById("exportCsvBtn").addEventListener("click", exportAllDataCSV);
+
+  // ---- CSV-Import ----
+  const EXPECTED_HEADER = ["klasse", "datum", "schüler", "kategorie", "wert", "erledigt"];
+  let pendingImport = null; // { byClass, importedCount, skippedCount }
+
+  function parseCSV(text){
+    if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    const rows = [];
+    let row = [], field = "", inQuotes = false;
+    for(let i = 0; i < text.length; i++){
+      const c = text[i];
+      if(inQuotes){
+        if(c === '"'){
+          if(text[i+1] === '"'){ field += '"'; i++; }
+          else inQuotes = false;
+        } else field += c;
+      } else {
+        if(c === '"') inQuotes = true;
+        else if(c === ';'){ row.push(field); field = ""; }
+        else if(c === '\r'){ /* ignoriert, \n folgt */ }
+        else if(c === '\n'){ row.push(field); rows.push(row); row = []; field = ""; }
+        else field += c;
+      }
+    }
+    if(field.length || row.length){ row.push(field); rows.push(row); }
+    return rows.filter(r => !(r.length === 1 && r[0].trim() === ""));
+  }
+
+  function normalizeDate(str){
+    str = (str || "").trim();
+    if(/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    let m = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/); // dd.mm.yyyy
+    if(m) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+    return null;
+  }
+
+  function freshImportDay(){ return { hw:[], mat:{}, sonst:{}, muendl:{}, done:{ hw:[], mat:[], sonst:[] } }; }
+
+  function buildImportedByClass(rows){
+    const byClass = {};
+    let importedCount = 0, skippedCount = 0;
+
+    rows.slice(1).forEach(r => {
+      const [klasseRaw, datumRaw, schuelerRaw, kategorieRaw, wertRaw, erledigtRaw] = r.map(v => (v || "").trim());
+      const klasse = klasseRaw, schueler = schuelerRaw, kategorie = kategorieRaw, wert = wertRaw || "";
+      const datum = normalizeDate(datumRaw);
+      const erledigt = (erledigtRaw || "").toLowerCase() === "ja";
+
+      if(!klasse || !datum || !schueler || !kategorie){ skippedCount++; return; }
+
+      if(!byClass[klasse]) byClass[klasse] = {};
+      if(!byClass[klasse][datum]) byClass[klasse][datum] = freshImportDay();
+      const day = byClass[klasse][datum];
+
+      if(kategorie === "HA vergessen"){
+        if(!day.hw.includes(schueler)) day.hw.push(schueler);
+        if(erledigt && !day.done.hw.includes(schueler)) day.done.hw.push(schueler);
+        importedCount++;
+      } else if(kategorie === "Material vergessen"){
+        const opt = matOptions.find(o => o.label === wert);
+        day.mat[schueler] = opt ? opt.key : wert;
+        if(erledigt && !day.done.mat.includes(schueler)) day.done.mat.push(schueler);
+        importedCount++;
+      } else if(kategorie === "Sonstiges"){
+        day.sonst[schueler] = wert;
+        if(erledigt && !day.done.sonst.includes(schueler)) day.done.sonst.push(schueler);
+        importedCount++;
+      } else if(kategorie === "Mündlich"){
+        const def = pillDefs.find(d => d.label === wert);
+        const val = def ? def.value : parseInt(wert, 10);
+        if(val >= 1 && val <= 5){ day.muendl[schueler] = val; importedCount++; }
+        else skippedCount++;
+      } else {
+        skippedCount++;
+      }
+    });
+
+    return { byClass, importedCount, skippedCount };
+  }
+
+  function pupilNamesInDay(day){
+    return new Set([
+      ...(day.hw || []),
+      ...Object.keys(day.mat || {}),
+      ...Object.keys(day.sonst || {}),
+      ...Object.keys(day.muendl || {})
+    ]);
+  }
+
+  function ensurePupilsFromDay(c, day){
+    pupilNamesInDay(day).forEach(name => { if(!c.pupils.includes(name)) c.pupils.push(name); });
+  }
+
+  function getOrCreateClassByName(name){
+    let c = classes.find(cl => cl.name === name);
+    if(!c){
+      c = { id: "c" + (nextClassNum++), name, pupils: [], data: {} };
+      classes.push(c);
+    }
+    return c;
+  }
+
+  function applyImport(mode){
+    if(!pendingImport) return;
+    const { byClass } = pendingImport;
+
+    if(mode === "overwrite"){
+      classes.forEach(c => { c.data = {}; });
+      Object.keys(byClass).forEach(className => {
+        const c = getOrCreateClassByName(className);
+        c.data = byClass[className];
+        Object.values(byClass[className]).forEach(day => ensurePupilsFromDay(c, day));
+        sortPupils(c);
+      });
+    } else {
+      Object.keys(byClass).forEach(className => {
+        const c = getOrCreateClassByName(className);
+        Object.keys(byClass[className]).forEach(date => {
+          const importedDay = byClass[className][date];
+          if(!c.data[date]) c.data[date] = freshImportDay();
+          const day = c.data[date];
+          if(!day.done) day.done = { hw:[], mat:[], sonst:[] };
+
+          importedDay.hw.forEach(p => { if(!day.hw.includes(p)) day.hw.push(p); });
+          Object.assign(day.mat, importedDay.mat);
+          Object.assign(day.sonst, importedDay.sonst);
+          Object.assign(day.muendl, importedDay.muendl);
+          ["hw","mat","sonst"].forEach(cat => {
+            importedDay.done[cat].forEach(p => { if(!day.done[cat].includes(p)) day.done[cat].push(p); });
+          });
+
+          ensurePupilsFromDay(c, importedDay);
+        });
+        sortPupils(c);
+      });
+    }
+
+    sortClasses();
+    activateClass(activeClassId);
+    saveClasses();
+    refreshChrome();
+
+    const modeLabel = mode === "overwrite" ? "Überschreiben" : "Ergänzen";
+    showToast(`Import abgeschlossen (${modeLabel}): ${pendingImport.importedCount} Einträge übernommen${pendingImport.skippedCount ? `, ${pendingImport.skippedCount} Zeilen übersprungen` : ""}.`);
+    pendingImport = null;
+  }
+
+  document.getElementById("importCsvBtn").addEventListener("click", () => {
+    document.getElementById("importCsvInput").click();
+  });
+
+  document.getElementById("importCsvInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const rows = parseCSV(String(reader.result));
+      if(!rows.length){
+        showToast("Die Datei enthält keine Daten.");
+        e.target.value = "";
+        return;
+      }
+      const header = rows[0].map(h => h.trim().toLowerCase());
+      const headerOk = EXPECTED_HEADER.every((h, i) => header[i] === h);
+      if(!headerOk){
+        showToast("Diese CSV-Datei hat nicht das erwartete Format (Spalten: Klasse; Datum; Schüler; Kategorie; Wert; Erledigt).");
+        e.target.value = "";
+        return;
+      }
+
+      const result = buildImportedByClass(rows);
+      if(result.importedCount === 0){
+        showToast("Es konnten keine gültigen Einträge aus der Datei gelesen werden.");
+        e.target.value = "";
+        return;
+      }
+
+      pendingImport = result;
+      const classNames = Object.keys(result.byClass);
+      document.getElementById("importSummary").textContent =
+        `${result.importedCount} Einträge gefunden für ${classNames.length} Klasse(n): ${classNames.join(", ")}.` +
+        (result.skippedCount ? ` (${result.skippedCount} Zeilen konnten nicht gelesen werden.)` : "") +
+        " Wie sollen die Daten übernommen werden?";
+      document.getElementById("importOverlay").classList.add("show");
+      e.target.value = "";
+    };
+    reader.readAsText(file, "UTF-8");
+  });
+
+  document.getElementById("importMergeBtn").addEventListener("click", () => {
+    applyImport("merge");
+    document.getElementById("importOverlay").classList.remove("show");
+  });
+  document.getElementById("importOverwriteBtn").addEventListener("click", () => {
+    applyImport("overwrite");
+    document.getElementById("importOverlay").classList.remove("show");
+  });
+  document.getElementById("importCancelBtn").addEventListener("click", () => {
+    pendingImport = null;
+    document.getElementById("importOverlay").classList.remove("show");
+  });
+  document.getElementById("importOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "importOverlay"){
+      pendingImport = null;
+      document.getElementById("importOverlay").classList.remove("show");
+    }
+  });
+
+  document.getElementById("addPupilBtn").addEventListener("click", addPupil);
+  document.getElementById("newPupilInput").addEventListener("keydown", (e) => { if(e.key === "Enter") addPupil(); });
+
+  // ---- Alle Daten löschen ----
+  document.getElementById("deleteAllBtn").addEventListener("click", () => {
+    if(!confirm("Wirklich ALLE Klassen, Schüler und Einträge auf diesem Gerät unwiderruflich löschen? Tipp: Vorher CSV exportieren, um eine Sicherung zu haben.")) return;
+    const input = prompt('Zur Sicherheit: Tippe LÖSCHEN, um den Vorgang zu bestätigen.');
+    if(input !== "LÖSCHEN") return;
+
+    classes = [{ id: "c1", name: "Beispiel-Klasse", pupils: [...DEFAULT_PUPILS], data: {} }];
+    activeClassId = "c1";
+    nextClassNum = 2;
+    activateClass(activeClassId);
+    saveClasses();
+
+    matOptions.length = 0;
+    DEFAULT_MAT_OPTIONS.forEach(o => matOptions.push({ ...o }));
+    sortMatOptions();
+    rebuildMatByKey();
+    saveMatOptions();
+
+    sonstVorschlaege.length = 0;
+    DEFAULT_SONST_VORSCHLAEGE.forEach(s => sonstVorschlaege.push(s));
+    sortSuggestions();
+    saveSuggestions();
+
+    refreshChrome();
+    document.querySelector("#settingsTabs button[data-tab='general']").click();
+    showToast("Alle Daten wurden gelöscht. Der Ausgangszustand wurde wiederhergestellt.");
+  });  function addPupil(){
+    const input = document.getElementById("newPupilInput");
+    const name = input.value.trim();
+    if(!name) return;
+    activeClass().pupils.push(name);
+    sortPupils(activeClass());
+    saveClasses();
+    input.value = "";
+    refreshChrome();
+  }
+
+  // ---- Einstellungen: Tabs ----
+  document.querySelectorAll("#settingsTabs button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#settingsTabs button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const tab = btn.dataset.tab;
+      document.getElementById("tabGeneral").style.display = tab === "general" ? "block" : "none";
+      document.getElementById("tabSonst").style.display = tab === "sonst" ? "block" : "none";
+      document.getElementById("tabDaten").style.display = tab === "daten" ? "block" : "none";
+    });
+  });
+
+  // ---- Einstellungen: Material-Vorschläge verwalten ----
+  function renderMatSuggestionsList(){
+    const list = document.getElementById("matSuggestionList");
+    list.innerHTML = "";
+    if(matOptions.length === 0){
+      list.innerHTML = `<div class="emptylist">Noch keine Material-Vorschläge angelegt.</div>`;
+    }
+    matOptions.forEach((o, idx) => {
+      const row = document.createElement("div");
+      row.className = "listrow";
+
+      const label = document.createElement("span");
+      label.className = "rowlabel";
+      label.textContent = `${o.icon} ${o.label}`;
+      label.title = "Antippen zum Bearbeiten";
+      label.addEventListener("click", () => startRenameMatSuggestion(row, idx));
+      row.appendChild(label);
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "iconbtn";
+      editBtn.textContent = "✎";
+      editBtn.title = "Bearbeiten";
+      editBtn.addEventListener("click", () => startRenameMatSuggestion(row, idx));
+      row.appendChild(editBtn);
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "iconbtn danger";
+      delBtn.textContent = "×";
+      delBtn.title = "Vorschlag entfernen";
+      delBtn.addEventListener("click", () => {
+        if(!confirm(`Material-Vorschlag „${o.label}" wirklich entfernen?`)) return;
+        matOptions.splice(idx, 1);
+        rebuildMatByKey();
+        saveMatOptions();
+        renderMatSuggestionsList();
+      });
+      row.appendChild(delBtn);
+
+      list.appendChild(row);
+    });
+  }
+
+  function startRenameMatSuggestion(row, idx){
+    if(row.querySelector("input")) return;
+    const label = row.querySelector(".rowlabel");
+    const o = matOptions[idx];
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "editfield";
+    input.value = o.label;
+    label.replaceWith(input);
+    input.focus();
+    input.select();
+
+    const commit = () => {
+      const val = input.value.trim();
+      if(val) o.label = val; // Symbol/Icon bleibt erhalten, nur der Text wird geändert
+      sortMatOptions();
+      rebuildMatByKey();
+      saveMatOptions();
+      renderMatSuggestionsList();
+    };
+    input.addEventListener("keydown", (e) => { if(e.key === "Enter") input.blur(); });
+    input.addEventListener("blur", commit);
+  }
+
+  document.getElementById("addMatSuggestionBtn").addEventListener("click", addMatSuggestion);
+  document.getElementById("newMatSuggestionInput").addEventListener("keydown", (e) => { if(e.key === "Enter") addMatSuggestion(); });
+  function addMatSuggestion(){
+    const input = document.getElementById("newMatSuggestionInput");
+    const val = input.value.trim();
+    if(!val) return;
+    matOptions.push({ key: uniqueMatKey(val), label: val, icon: "📦" });
+    sortMatOptions();
+    rebuildMatByKey();
+    saveMatOptions();
+    input.value = "";
+    renderMatSuggestionsList();
+  }
+
+  // ---- Einstellungen: Sonstiges-Vorschläge verwalten ----
+  function renderSuggestionsList(){
+    const list = document.getElementById("suggestionList");
+    list.innerHTML = "";
+    if(sonstVorschlaege.length === 0){
+      list.innerHTML = `<div class="emptylist">Noch keine Vorschläge angelegt.</div>`;
+    }
+    sonstVorschlaege.forEach((s, idx) => {
+      const row = document.createElement("div");
+      row.className = "listrow";
+
+      const label = document.createElement("span");
+      label.className = "rowlabel";
+      label.textContent = s;
+      label.title = "Antippen zum Bearbeiten";
+      label.addEventListener("click", () => startRenameSuggestion(row, idx));
+      row.appendChild(label);
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "iconbtn";
+      editBtn.textContent = "✎";
+      editBtn.title = "Bearbeiten";
+      editBtn.addEventListener("click", () => startRenameSuggestion(row, idx));
+      row.appendChild(editBtn);
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "iconbtn danger";
+      delBtn.textContent = "×";
+      delBtn.title = "Vorschlag entfernen";
+      delBtn.addEventListener("click", () => {
+        if(!confirm(`Vorschlag „${s}" wirklich entfernen?`)) return;
+        sonstVorschlaege.splice(idx, 1);
+        saveSuggestions();
+        renderSuggestionsList();
+      });
+      row.appendChild(delBtn);
+
+      list.appendChild(row);
+    });
+  }
+
+  function startRenameSuggestion(row, idx){
+    if(row.querySelector("input")) return;
+    const label = row.querySelector(".rowlabel");
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "editfield";
+    input.value = sonstVorschlaege[idx];
+    label.replaceWith(input);
+    input.focus();
+    input.select();
+
+    const commit = () => {
+      const val = input.value.trim();
+      if(val) sonstVorschlaege[idx] = val;
+      sortSuggestions();
+      saveSuggestions();
+      renderSuggestionsList();
+    };
+    input.addEventListener("keydown", (e) => { if(e.key === "Enter") input.blur(); });
+    input.addEventListener("blur", commit);
+  }
+
+  document.getElementById("addSuggestionBtn").addEventListener("click", addSuggestion);
+  document.getElementById("newSuggestionInput").addEventListener("keydown", (e) => { if(e.key === "Enter") addSuggestion(); });
+  function addSuggestion(){
+    const input = document.getElementById("newSuggestionInput");
+    const val = input.value.trim();
+    if(!val) return;
+    sonstVorschlaege.push(val);
+    sortSuggestions();
+    saveSuggestions();
+    input.value = "";
+    renderSuggestionsList();
+  }
+
+  // ---- Einstellungen öffnen/schließen ----
+  function openSettings(){
+    document.querySelectorAll("#settingsTabs button").forEach(b => b.classList.remove("active"));
+    document.querySelector("#settingsTabs button[data-tab='general']").classList.add("active");
+    document.getElementById("tabGeneral").style.display = "block";
+    document.getElementById("tabSonst").style.display = "none";
+    document.getElementById("tabDaten").style.display = "none";
+    renderClassSettingsList();
+    renderPupilSettingsList();
+    renderMatSuggestionsList();
+    renderSuggestionsList();
+    document.getElementById("settingsOverlay").classList.add("show");
+  }
+  document.getElementById("settingsBtn").addEventListener("click", openSettings);
+  document.getElementById("closeSettings").addEventListener("click", () => {
+    document.getElementById("settingsOverlay").classList.remove("show");
+  });
+  document.getElementById("settingsOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "settingsOverlay") document.getElementById("settingsOverlay").classList.remove("show");
+  });
+
+  classpickerLabel.textContent = activeClass().name;
+  applyDate(todayISO());
+
+  // ---- PWA: Service Worker registrieren (Offline-Nutzung, Home-Bildschirm) ----
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+    });
+  }
+</script>
+
+</body>
+</html>
