@@ -464,10 +464,14 @@ width: 28px; height: 24px;}
     .print-page{ padding:14mm 12mm; }
     @page{ size:A4; margin:0; }
 
-    /* Sitzplan-Druck: keine Markierungsfarben, kräftigere Umrandung, volle Breite */
+    /* Sitzplan-Druck: schwarz-weiß, keine Markierungsfarben, kräftigere Umrandung, volle Breite, gleich große Kästchen */
+    #printArea .sp-board{ max-width:none; width:100%; text-align:center; margin:32px 0 20px; }
     #printArea .sp-print-grid{ max-width:none; width:100%; }
     #printArea .sp-print-grid .sp-seat-row{ width:100%; }
-    #printArea .sp-print-grid .sp-seat{ flex:1; width:auto; border-width:2px; border-color:#1B1C19; }
+    #printArea .sp-print-grid .sp-seat{
+      flex:1; width:auto; border-width:2px; border-color:#1B1C19;
+      background:#fff !important; color:#1B1C19 !important;
+    }
   }
 
   /* ---- Ansichts-Umschalter (Erfassung / Sitzplan) ---- */
@@ -512,9 +516,10 @@ width: 28px; height: 24px;}
   .sp-grid{ display:flex; flex-direction:column; gap:9px; width:100%; max-width:560px; }
   .sp-seat-row{ display:flex; gap:9px; justify-content:center; }
   .sp-seat{
-    width:96px; height:60px; border:1.5px solid var(--line); border-radius:9px; background:var(--surface);
-    display:flex; align-items:center; justify-content:center; text-align:center; font-size:12px;
-    padding:4px; cursor:pointer; user-select:none; line-height:1.25; color:var(--ink);
+    width:96px; height:60px; min-width:0; min-height:0; border:1.5px solid var(--line); border-radius:9px; background:var(--surface);
+    display:flex; align-items:center; justify-content:center; text-align:center; font-size:11.5px;
+    padding:4px; cursor:pointer; user-select:none; line-height:1.2; color:var(--ink);
+    overflow:hidden; word-break:break-word; overflow-wrap:anywhere; hyphens:auto;
   }
   .sp-seat.filled{ background:#E4EAFB; font-weight:700; }
   .sp-seat.disabled{ background:var(--stripe); border-style:dashed; cursor:default; color:var(--muted); }
@@ -2619,7 +2624,7 @@ width: 28px; height: 24px;}
           <div class="pname">${escapeHTML(plan.name)}</div>
           <div class="pdate">${escapeHTML(c.name)}</div>
         </div>
-        <div class="sp-board" style="margin:14px 0 18px;">Tafel / Whiteboard</div>
+        <div class="sp-board">Tafel / Whiteboard</div>
         <div class="sp-grid sp-print-grid">${gridHTML}</div>
       </div>
     `;
