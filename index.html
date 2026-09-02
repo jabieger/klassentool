@@ -463,6 +463,80 @@ width: 28px; height: 24px;}
     #printArea{ display:block; position:absolute; top:0; left:0; width:100%; }
     .print-page{ padding:14mm 12mm; }
     @page{ size:A4; margin:0; }
+
+    /* Sitzplan-Druck: keine Markierungsfarben, kräftigere Umrandung, volle Breite */
+    #printArea .sp-print-grid{ max-width:none; width:100%; }
+    #printArea .sp-print-grid .sp-seat-row{ width:100%; }
+    #printArea .sp-print-grid .sp-seat{ flex:1; width:auto; border-width:2px; border-color:#1B1C19; }
+  }
+
+  /* ---- Ansichts-Umschalter (Erfassung / Sitzplan) ---- */
+  .viewtabs{ display:flex; background:var(--stripe); border:1px solid var(--line); border-radius:12px; padding:3px; width:fit-content; }
+  .viewtabs button{ border:none; background:transparent; padding:8px 18px; font-size:13px; font-weight:700; color:var(--muted); border-radius:9px; cursor:pointer; }
+  .viewtabs button.active{ background:var(--ink); color:#fff; }
+
+  /* ---- Sitzplan-Ansicht ---- */
+  .sp-app{ display:flex; flex-wrap:wrap; align-items:flex-start; }
+  .sp-sidebar{
+    width:300px; flex-shrink:0; background:var(--surface); border:1px solid var(--line);
+    border-radius:14px; padding:16px; margin:0 18px 18px 18px;
+  }
+  .sp-sidebar section{ margin-bottom:20px; }
+  .sp-sidebar section:last-child{ margin-bottom:0; }
+  .sp-sidebar h2{ font-size:12px; margin:0 0 8px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; font-weight:700; }
+  .sp-sidebar label{ display:block; font-size:12.5px; margin-bottom:4px; color:var(--muted); }
+  .sp-sidebar select, .sp-sidebar input[type=number], .sp-sidebar input[type=text]{
+    width:100%; padding:8px 10px; border:1.5px solid var(--line); border-radius:9px;
+    font:inherit; font-size:13.5px; color:var(--ink); background:var(--bg); margin-bottom:6px;
+  }
+  .sp-row{ display:flex; gap:8px; }
+  .sp-row > *{ flex:1; }
+  .sp-sidebar button{
+    cursor:pointer; border:1.5px solid var(--line); background:var(--surface); color:var(--ink);
+    border-radius:9px; padding:9px 10px; font-size:13px; font-weight:700; margin-top:6px; width:100%;
+  }
+  .sp-sidebar button:hover{ background:var(--stripe); }
+  .sp-sidebar button.sp-primary{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .sp-sidebar button.sp-danger{ color:var(--hw); }
+  .sp-sidebar button.sp-danger:hover{ background:#F5E3D8; }
+  .sp-sidebar button.sp-toggle.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .sp-hint{ font-size:11.5px; color:var(--muted); margin-top:4px; line-height:1.4; }
+
+  .sp-main{ flex:1; min-width:280px; padding:0 18px 18px; display:flex; flex-direction:column; align-items:center; }
+  .sp-plantitle{ font-size:19px; font-weight:700; margin-bottom:2px; align-self:flex-start; }
+  .sp-planmeta{ font-size:12.5px; color:var(--muted); margin-bottom:16px; align-self:flex-start; }
+  .sp-board{
+    width:100%; max-width:560px; text-align:center; padding:8px 0 16px; color:var(--muted);
+    font-size:12.5px; border-bottom:2px solid var(--line); margin-bottom:18px;
+  }
+  .sp-grid{ display:flex; flex-direction:column; gap:9px; width:100%; max-width:560px; }
+  .sp-seat-row{ display:flex; gap:9px; justify-content:center; }
+  .sp-seat{
+    width:96px; height:60px; border:1.5px solid var(--line); border-radius:9px; background:var(--surface);
+    display:flex; align-items:center; justify-content:center; text-align:center; font-size:12px;
+    padding:4px; cursor:pointer; user-select:none; line-height:1.25; color:var(--ink);
+  }
+  .sp-seat.filled{ background:#E4EAFB; font-weight:700; }
+  .sp-seat.disabled{ background:var(--stripe); border-style:dashed; cursor:default; color:var(--muted); }
+  .sp-seat.selected{ outline:2px solid var(--accent); outline-offset:2px; }
+  .sp-seat.flagged{ box-shadow:inset 4px 0 0 var(--hw); }
+  .sp-unassigned-zone{
+    width:100%; max-width:560px; margin-top:26px; border:2px dashed var(--line); border-radius:10px;
+    padding:12px 14px; min-height:50px;
+  }
+  .sp-unassigned-zone.drop-target{ border-color:var(--accent); background:#E4EAFB; }
+  .sp-unassigned-zone h2{ margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700; }
+  .sp-unassigned-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .sp-chip{
+    border:1.5px solid var(--line); background:var(--surface); border-radius:14px; padding:5px 11px;
+    font-size:12.5px; cursor:pointer; color:var(--ink);
+  }
+  .sp-chip.selected{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .sp-chip.flagged{ border-color:var(--hw); background:#F5E3D8; }
+
+  @media (max-width: 760px){
+    .sp-app{ flex-direction:column; }
+    .sp-sidebar{ width:auto; }
   }
 </style>
 </head>
@@ -476,6 +550,10 @@ width: 28px; height: 24px;}
         <span class="chev">▾</span>
       </button>
       <div class="classpicker-menu" id="classpickerMenu"></div>
+    </div>
+    <div class="viewtabs" id="viewTabs">
+      <button class="active" data-view="erfassung">📋 Erfassung</button>
+      <button data-view="sitzplan">🪑 Sitzplan</button>
     </div>
   </div>
   <div class="header-controls">
@@ -495,6 +573,7 @@ width: 28px; height: 24px;}
   </div>
 </header>
 
+<div id="erfassungView">
 <div class="wrap">
   <table>
     <thead>
@@ -512,6 +591,73 @@ width: 28px; height: 24px;}
 
 <div class="bottombar">
   <button class="btn primary" id="overviewBtn">Übersicht</button>
+</div>
+</div>
+
+<div id="sitzplanView" style="display:none;">
+  <div class="sp-app">
+    <div class="sp-sidebar">
+      <section>
+        <h2>Plan</h2>
+        <label for="spPlanSelect">Sitzplan für <span id="spClassName"></span></label>
+        <select id="spPlanSelect"></select>
+        <div class="sp-row">
+          <button id="spNewPlanBtn">Neuer Plan</button>
+          <button id="spRenamePlanBtn">Umbenennen</button>
+        </div>
+        <button id="spDeletePlanBtn" class="sp-danger">Plan löschen</button>
+      </section>
+
+      <section>
+        <h2>Raum-Layout</h2>
+        <div class="sp-row">
+          <div>
+            <label for="spRowsInput">Reihen</label>
+            <input type="number" id="spRowsInput" min="1" max="20">
+          </div>
+          <div>
+            <label for="spSeatsInput">Plätze/Reihe</label>
+            <input type="number" id="spSeatsInput" min="1" max="12">
+          </div>
+        </div>
+        <button id="spApplyLayoutBtn">Größe übernehmen</button>
+        <button id="spToggleEditBtn" class="sp-toggle">Plätze deaktivieren (An/Aus)</button>
+        <div class="sp-hint">Im Bearbeitungsmodus einzelne Plätze anklicken, um sie leer zu lassen (z. B. letzte Reihe).</div>
+      </section>
+
+      <section>
+        <h2>Hervorheben</h2>
+        <button id="spToggleHighlightBtn" class="sp-toggle">Markieren (An/Aus)</button>
+        <div class="sp-hint">Im Markier-Modus auf einen Sitzplatz oder Namen tippen, um ihn farbig hervorzuheben.</div>
+      </section>
+
+      <section>
+        <h2>Verteilung</h2>
+        <button id="spRandomizeBtn" class="sp-primary">Zufällig verteilen</button>
+        <div class="sp-hint">Platz und danach Namen (oder Platz) antippen, um zu tauschen bzw. zu verschieben.</div>
+      </section>
+
+      <section>
+        <h2>Sichern</h2>
+        <button id="spExportBtn">Als Datei exportieren (JSON)</button>
+        <input type="file" id="spImportFile" accept="application/json" style="display:none;">
+        <button id="spImportBtn">Aus Datei importieren</button>
+        <button id="spPrintBtn">Drucken / als PDF</button>
+        <div class="sp-hint">Tipp: Für breite Sitzpläne im Druckdialog „Querformat" wählen.</div>
+      </section>
+    </div>
+
+    <div class="sp-main">
+      <div class="sp-plantitle" id="spPlanTitle"></div>
+      <div class="sp-planmeta" id="spPlanMeta"></div>
+      <div class="sp-board">Tafel / Whiteboard</div>
+      <div id="spGrid" class="sp-grid"></div>
+      <div class="sp-unassigned-zone" id="spUnassignedZone">
+        <h2>Nicht zugeordnet</h2>
+        <div id="spUnassignedChips" class="sp-unassigned-chips"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <footer>Alle Daten bleiben lokal auf diesem Gerät.</footer>
@@ -778,12 +924,46 @@ width: 28px; height: 24px;}
   }
   function sortPupils(c){ c.pupils.sort((a,b) => lastNameKey(a).localeCompare(lastNameKey(b), "de")); }
 
+  // ---- Sitzplan: Datenmodell pro Klasse (mehrere Pläne möglich, Schülerliste kommt aus c.pupils) ----
+  function makeDefaultSitzplan(name){
+    return { id:"sp" + Date.now() + Math.floor(Math.random()*1000), name: name || "Sitzplan 1", rows:5, seatsPerRow:6, disabled:[], assignment:{}, highlighted:[] };
+  }
+  function ensureSitzplaene(c){
+    if(!Array.isArray(c.sitzplaene) || c.sitzplaene.length === 0){
+      c.sitzplaene = [ makeDefaultSitzplan("Sitzplan 1") ];
+    }
+    if(!c.activeSitzplanId || !c.sitzplaene.some(p => p.id === c.activeSitzplanId)){
+      c.activeSitzplanId = c.sitzplaene[0].id;
+    }
+  }
+  // Entfernt Sitzzuweisungen/Markierungen für Schüler, die nicht mehr in der Klasse sind
+  function syncSitzplaeneWithPupils(c){
+    const validSet = new Set(c.pupils);
+    (c.sitzplaene || []).forEach(plan => {
+      Object.keys(plan.assignment).forEach(seatIdx => {
+        if(!validSet.has(plan.assignment[seatIdx])) delete plan.assignment[seatIdx];
+      });
+      plan.highlighted = (plan.highlighted || []).filter(n => validSet.has(n));
+    });
+  }
+  // Überträgt eine Schüler-Umbenennung in alle Sitzpläne der Klasse
+  function renamePupilInSitzplaene(c, oldName, newName){
+    (c.sitzplaene || []).forEach(plan => {
+      Object.keys(plan.assignment).forEach(seatIdx => {
+        if(plan.assignment[seatIdx] === oldName) plan.assignment[seatIdx] = newName;
+      });
+      const hi = (plan.highlighted || []).indexOf(oldName);
+      if(hi !== -1) plan.highlighted[hi] = newName;
+    });
+  }
+
   const loaded = loadClasses();
   let classes = loaded.classes;
   let activeClassId = loaded.activeClassId;
   classes.forEach(c => { if(!c.data) c.data = {}; });
   sortClasses();
   classes.forEach(sortPupils);
+  classes.forEach(ensureSitzplaene);
 
   let nextClassNum = classes.reduce((max, c) => {
     const m = /^c(\d+)$/.exec(c.id);
@@ -1385,6 +1565,8 @@ width: 28px; height: 24px;}
   function refreshChrome(){
     classpickerLabel.textContent = activeClass().name;
     renderTable();
+    spSelection = null;
+    if(currentView === "sitzplan") renderSitzplanView();
     if(document.getElementById("settingsOverlay").classList.contains("show")){
       renderClassSettingsList();
       renderPupilSettingsList();
@@ -1476,7 +1658,9 @@ width: 28px; height: 24px;}
     const name = input.value.trim();
     if(!name) return;
     const id = "c" + (nextClassNum++);
-    classes.push({ id, name, pupils: [], data: {} });
+    const c = { id, name, pupils: [], data: {} };
+    ensureSitzplaene(c);
+    classes.push(c);
     sortClasses();
     activateClass(id);
     saveClasses();
@@ -1520,6 +1704,7 @@ width: 28px; height: 24px;}
       delBtn.addEventListener("click", () => {
         if(!confirm(`„${p}" wirklich aus der Klasse entfernen?`)) return;
         c.pupils.splice(idx, 1);
+        syncSitzplaeneWithPupils(c);
         saveClasses();
         refreshChrome();
       });
@@ -1542,7 +1727,11 @@ width: 28px; height: 24px;}
 
     const commit = () => {
       const val = input.value.trim();
-      if(val) c.pupils[idx] = val;
+      const oldName = c.pupils[idx];
+      if(val && val !== oldName){
+        c.pupils[idx] = val;
+        renamePupilInSitzplaene(c, oldName, val);
+      }
       sortPupils(c);
       saveClasses();
       refreshChrome();
@@ -1725,6 +1914,7 @@ width: 28px; height: 24px;}
     let c = classes.find(cl => cl.name === name);
     if(!c){
       c = { id: "c" + (nextClassNum++), name, pupils: [], data: {} };
+      ensureSitzplaene(c);
       classes.push(c);
     }
     return c;
@@ -1918,6 +2108,7 @@ width: 28px; height: 24px;}
     if(input !== "LÖSCHEN") return;
 
     classes = [{ id: "c1", name: "Beispiel-Klasse", pupils: [...DEFAULT_PUPILS], data: {} }];
+    ensureSitzplaene(classes[0]);
     activeClassId = "c1";
     nextClassNum = 2;
     activateClass(activeClassId);
@@ -2135,6 +2326,346 @@ width: 28px; height: 24px;}
   });
   document.getElementById("settingsOverlay").addEventListener("click", (e) => {
     if(e.target.id === "settingsOverlay") document.getElementById("settingsOverlay").classList.remove("show");
+  });
+
+  // ==================================================================
+  // ---- Sitzplan (pro Klasse, mehrere Pläne möglich) ----
+  // ==================================================================
+  let currentView = "erfassung";
+  let spSelection = null;
+  let spLayoutEditMode = false;
+  let spHighlightEditMode = false;
+
+  function currentSitzplan(){
+    const c = activeClass();
+    ensureSitzplaene(c);
+    return c.sitzplaene.find(p => p.id === c.activeSitzplanId);
+  }
+
+  // Im Sitzplan wird nur der Vorname angezeigt (Zuordnung/Markierung speichern weiterhin den vollen Namen)
+  function spFirstName(fullName){ return (fullName || "").trim().split(/\s+/)[0] || fullName; }
+
+  function spSeatIndex(row, col, seatsPerRow){ return row * seatsPerRow + col; }
+  function spSeatActive(plan, idx){ return !plan.disabled.includes(idx); }
+  function spActiveSeatIndices(plan){
+    const total = plan.rows * plan.seatsPerRow;
+    const result = [];
+    for(let i = 0; i < total; i++) if(spSeatActive(plan, i)) result.push(i);
+    return result;
+  }
+  function spUnassignedStudents(plan){
+    const seated = new Set(Object.values(plan.assignment));
+    return activeClass().pupils.filter(p => !seated.has(p));
+  }
+
+  function spOnSeatClick(idx){
+    const plan = currentSitzplan();
+    if(spLayoutEditMode){
+      const pos = plan.disabled.indexOf(idx);
+      if(pos >= 0) plan.disabled.splice(pos, 1);
+      else { delete plan.assignment[idx]; plan.disabled.push(idx); }
+      saveClasses(); renderSitzplanView();
+      return;
+    }
+    if(!spSeatActive(plan, idx)) return;
+    if(spHighlightEditMode){
+      const occupant = plan.assignment[idx];
+      if(!occupant) return;
+      const hi = plan.highlighted.indexOf(occupant);
+      if(hi === -1) plan.highlighted.push(occupant); else plan.highlighted.splice(hi, 1);
+      saveClasses(); renderSitzplanView();
+      return;
+    }
+
+    const sel = spSelection;
+    if(!sel){
+      if(plan.assignment[idx]) spSelection = { type:"seat", idx };
+      renderSitzplanView();
+      return;
+    }
+    if(sel.type === "seat"){
+      if(sel.idx === idx){ spSelection = null; renderSitzplanView(); return; }
+      const a = plan.assignment[sel.idx];
+      const b = plan.assignment[idx];
+      if(b) plan.assignment[sel.idx] = b; else delete plan.assignment[sel.idx];
+      if(a) plan.assignment[idx] = a; else delete plan.assignment[idx];
+      spSelection = null;
+      saveClasses(); renderSitzplanView();
+      return;
+    }
+    if(sel.type === "student"){
+      plan.assignment[idx] = sel.name;
+      spSelection = null;
+      saveClasses(); renderSitzplanView();
+    }
+  }
+
+  function spOnChipClick(name){
+    if(spLayoutEditMode) return;
+    if(spHighlightEditMode){
+      const plan = currentSitzplan();
+      const hi = plan.highlighted.indexOf(name);
+      if(hi === -1) plan.highlighted.push(name); else plan.highlighted.splice(hi, 1);
+      saveClasses(); renderSitzplanView();
+      return;
+    }
+    const sel = spSelection;
+    if(sel && sel.type === "student" && sel.name === name) spSelection = null;
+    else spSelection = { type:"student", name };
+    renderSitzplanView();
+  }
+
+  function spOnUnassignedZoneClick(){
+    if(spLayoutEditMode || spHighlightEditMode) return;
+    const sel = spSelection;
+    if(!sel || sel.type !== "seat") return;
+    delete currentSitzplan().assignment[sel.idx];
+    spSelection = null;
+    saveClasses(); renderSitzplanView();
+  }
+
+  function spRandomize(){
+    const plan = currentSitzplan();
+    const seats = spActiveSeatIndices(plan);
+    const students = activeClass().pupils.slice();
+    for(let i = students.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [students[i], students[j]] = [students[j], students[i]];
+    }
+    plan.assignment = {};
+    seats.forEach((seatIdx, i) => { if(students[i]) plan.assignment[seatIdx] = students[i]; });
+    spSelection = null;
+    saveClasses(); renderSitzplanView();
+  }
+
+  function spApplyLayout(){
+    const plan = currentSitzplan();
+    const rows = Math.max(1, parseInt(document.getElementById("spRowsInput").value) || 1);
+    const seatsPerRow = Math.max(1, parseInt(document.getElementById("spSeatsInput").value) || 1);
+    plan.rows = rows;
+    plan.seatsPerRow = seatsPerRow;
+    const total = rows * seatsPerRow;
+    plan.disabled = plan.disabled.filter(i => i < total);
+    Object.keys(plan.assignment).forEach(k => { if(Number(k) >= total) delete plan.assignment[k]; });
+    saveClasses(); renderSitzplanView();
+  }
+
+  function spNewPlan(){
+    const c = activeClass();
+    const name = prompt("Name des neuen Sitzplans:");
+    if(!name) return;
+    const base = currentSitzplan();
+    const id = "sp" + Date.now();
+    c.sitzplaene.push({
+      id, name,
+      rows: base.rows, seatsPerRow: base.seatsPerRow,
+      disabled: base.disabled.slice(),
+      assignment: {},
+      highlighted: base.highlighted.slice()
+    });
+    c.activeSitzplanId = id;
+    spSelection = null;
+    saveClasses(); renderSitzplanView();
+  }
+
+  function spRenamePlan(){
+    const plan = currentSitzplan();
+    const name = prompt("Neuer Name:", plan.name);
+    if(!name) return;
+    plan.name = name;
+    saveClasses(); renderSitzplanView();
+  }
+
+  function spDeletePlan(){
+    const c = activeClass();
+    if(c.sitzplaene.length <= 1){ alert("Der letzte Sitzplan dieser Klasse kann nicht gelöscht werden."); return; }
+    const plan = currentSitzplan();
+    if(!confirm(`Sitzplan „${plan.name}" wirklich löschen?`)) return;
+    c.sitzplaene = c.sitzplaene.filter(p => p.id !== plan.id);
+    c.activeSitzplanId = c.sitzplaene[0].id;
+    spSelection = null;
+    saveClasses(); renderSitzplanView();
+  }
+
+  function spExportPlan(){
+    const plan = currentSitzplan();
+    const payload = { ...plan, className: activeClass().name };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = plan.name.replace(/[^\w\-äöüÄÖÜß ]/g, "").trim() + ".json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function spImportPlan(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const raw = JSON.parse(reader.result);
+        const c = activeClass();
+        let id = "sp" + Date.now();
+        while(c.sitzplaene.some(p => p.id === id)) id += "_2";
+        const validPupils = new Set(c.pupils);
+        const assignment = {};
+        Object.keys(raw.assignment || {}).forEach(k => {
+          if(validPupils.has(raw.assignment[k])) assignment[k] = raw.assignment[k];
+        });
+        c.sitzplaene.push({
+          id,
+          name: raw.name || "Importierter Plan",
+          rows: raw.rows || 5,
+          seatsPerRow: raw.seatsPerRow || 6,
+          disabled: Array.isArray(raw.disabled) ? raw.disabled : [],
+          assignment,
+          highlighted: (raw.highlighted || []).filter(n => validPupils.has(n))
+        });
+        c.activeSitzplanId = id;
+        saveClasses(); renderSitzplanView();
+      }catch(e){
+        alert("Datei konnte nicht gelesen werden: " + e.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function renderSitzplanView(){
+    const c = activeClass();
+    ensureSitzplaene(c);
+    const plan = currentSitzplan();
+
+    document.getElementById("spClassName").textContent = c.name;
+
+    const select = document.getElementById("spPlanSelect");
+    select.innerHTML = "";
+    c.sitzplaene.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name;
+      if(p.id === c.activeSitzplanId) opt.selected = true;
+      select.appendChild(opt);
+    });
+
+    document.getElementById("spRowsInput").value = plan.rows;
+    document.getElementById("spSeatsInput").value = plan.seatsPerRow;
+
+    document.getElementById("spPlanTitle").textContent = plan.name;
+    document.getElementById("spPlanMeta").textContent =
+      `${c.pupils.length} Schüler · ${spActiveSeatIndices(plan).length} aktive Plätze`;
+
+    document.getElementById("spToggleEditBtn").classList.toggle("active", spLayoutEditMode);
+    document.getElementById("spToggleHighlightBtn").classList.toggle("active", spHighlightEditMode);
+
+    document.getElementById("spUnassignedZone").classList.toggle(
+      "drop-target", !spLayoutEditMode && !spHighlightEditMode && !!(spSelection && spSelection.type === "seat")
+    );
+
+    const grid = document.getElementById("spGrid");
+    grid.innerHTML = "";
+    for(let r = 0; r < plan.rows; r++){
+      const rowEl = document.createElement("div");
+      rowEl.className = "sp-seat-row";
+      for(let col = 0; col < plan.seatsPerRow; col++){
+        const idx = spSeatIndex(r, col, plan.seatsPerRow);
+        const seatEl = document.createElement("div");
+        const active = spSeatActive(plan, idx);
+        const occupant = plan.assignment[idx];
+        const flagged = occupant && plan.highlighted.includes(occupant);
+        seatEl.className = "sp-seat" + (!active ? " disabled" : occupant ? " filled" : "") + (flagged ? " flagged" : "");
+        if(spSelection && spSelection.type === "seat" && spSelection.idx === idx) seatEl.classList.add("selected");
+        seatEl.textContent = !active ? "" : (occupant ? spFirstName(occupant) : "·");
+        if(occupant) seatEl.title = occupant;
+        seatEl.addEventListener("click", () => spOnSeatClick(idx));
+        rowEl.appendChild(seatEl);
+      }
+      grid.appendChild(rowEl);
+    }
+
+    const unassignedEl = document.getElementById("spUnassignedChips");
+    unassignedEl.innerHTML = "";
+    spUnassignedStudents(plan).forEach(name => {
+      const chip = document.createElement("div");
+      chip.className = "sp-chip"
+        + (spSelection && spSelection.type === "student" && spSelection.name === name ? " selected" : "")
+        + (plan.highlighted.includes(name) ? " flagged" : "");
+      chip.textContent = spFirstName(name);
+      chip.title = name;
+      chip.addEventListener("click", (e) => { e.stopPropagation(); spOnChipClick(name); });
+      unassignedEl.appendChild(chip);
+    });
+  }
+
+  function printSitzplan(){
+    const c = activeClass();
+    const plan = currentSitzplan();
+    let gridHTML = "";
+    for(let r = 0; r < plan.rows; r++){
+      gridHTML += `<div class="sp-seat-row">`;
+      for(let col = 0; col < plan.seatsPerRow; col++){
+        const idx = spSeatIndex(r, col, plan.seatsPerRow);
+        const active = spSeatActive(plan, idx);
+        const occupant = plan.assignment[idx];
+        // Beim Drucken keine Markierungen anzeigen
+        const cls = "sp-seat" + (!active ? " disabled" : occupant ? " filled" : "");
+        gridHTML += `<div class="${cls}">${!active ? "" : escapeHTML(occupant ? spFirstName(occupant) : "·")}</div>`;
+      }
+      gridHTML += `</div>`;
+    }
+
+    document.getElementById("printArea").innerHTML = `
+      <div class="print-page">
+        <div class="print-head">
+          <div class="pname">${escapeHTML(plan.name)}</div>
+          <div class="pdate">${escapeHTML(c.name)}</div>
+        </div>
+        <div class="sp-board" style="margin:14px 0 18px;">Tafel / Whiteboard</div>
+        <div class="sp-grid sp-print-grid">${gridHTML}</div>
+      </div>
+    `;
+    window.print();
+  }
+
+  document.getElementById("spPlanSelect").addEventListener("change", (e) => {
+    activeClass().activeSitzplanId = e.target.value;
+    spSelection = null;
+    saveClasses(); renderSitzplanView();
+  });
+  document.getElementById("spNewPlanBtn").addEventListener("click", spNewPlan);
+  document.getElementById("spRenamePlanBtn").addEventListener("click", spRenamePlan);
+  document.getElementById("spDeletePlanBtn").addEventListener("click", spDeletePlan);
+  document.getElementById("spApplyLayoutBtn").addEventListener("click", spApplyLayout);
+  document.getElementById("spToggleEditBtn").addEventListener("click", () => {
+    spLayoutEditMode = !spLayoutEditMode;
+    if(spLayoutEditMode) spHighlightEditMode = false;
+    spSelection = null;
+    renderSitzplanView();
+  });
+  document.getElementById("spToggleHighlightBtn").addEventListener("click", () => {
+    spHighlightEditMode = !spHighlightEditMode;
+    if(spHighlightEditMode) spLayoutEditMode = false;
+    spSelection = null;
+    renderSitzplanView();
+  });
+  document.getElementById("spRandomizeBtn").addEventListener("click", spRandomize);
+  document.getElementById("spExportBtn").addEventListener("click", spExportPlan);
+  document.getElementById("spImportBtn").addEventListener("click", () => document.getElementById("spImportFile").click());
+  document.getElementById("spImportFile").addEventListener("change", (e) => {
+    if(e.target.files[0]) spImportPlan(e.target.files[0]);
+    e.target.value = "";
+  });
+  document.getElementById("spPrintBtn").addEventListener("click", printSitzplan);
+  document.getElementById("spUnassignedZone").addEventListener("click", spOnUnassignedZoneClick);
+
+  document.querySelectorAll("#viewTabs button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#viewTabs button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentView = btn.dataset.view;
+      document.getElementById("erfassungView").style.display = currentView === "erfassung" ? "" : "none";
+      document.getElementById("sitzplanView").style.display = currentView === "sitzplan" ? "" : "none";
+      if(currentView === "sitzplan") renderSitzplanView();
+    });
   });
 
   classpickerLabel.textContent = activeClass().name;

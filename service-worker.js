@@ -1,4 +1,4 @@
-const CACHE_NAME = "klassentool-v1";
+const CACHE_NAME = "klassentool-v2";
 const ASSETS = [
   "./",
   "./index.html",
