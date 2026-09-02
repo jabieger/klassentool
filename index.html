@@ -569,6 +569,11 @@ width: 28px; height: 24px;}
           <input type="text" id="newPupilInput" placeholder="Name, z. B. Mika L.">
           <button id="addPupilBtn">Hinzufügen</button>
         </div>
+        <div class="addrow" style="margin-top:8px;">
+          <button id="importPupilsCsvBtn" class="today-btn" style="padding:9px 14px;">CSV importieren</button>
+          <input type="file" id="importPupilsCsvInput" accept=".csv,text/csv" style="display:none;">
+        </div>
+        <p style="font-size:11.5px; color:var(--muted); margin:6px 2px 0;">CSV mit den Spalten „Vorname" und „Nachname" (durch Semikolon getrennt). Neue Schüler werden ergänzt, bereits vorhandene übersprungen.</p>
       </div>
     </div>
 
@@ -766,7 +771,12 @@ width: 28px; height: 24px;}
   function getClass(id){ return classes.find(c => c.id === id); }
   function activeClass(){ return getClass(activeClassId); }
   function sortClasses(){ classes.sort((a,b) => a.name.localeCompare(b.name, "de")); }
-  function sortPupils(c){ c.pupils.sort((a,b) => a.localeCompare(b, "de")); }
+  // Sortiert Schüler nach dem letzten Wort im Namen (Nachname bei "Vorname Nachname").
+  function lastNameKey(name){
+    const parts = name.trim().split(/\s+/);
+    return parts[parts.length - 1] || name;
+  }
+  function sortPupils(c){ c.pupils.sort((a,b) => lastNameKey(a).localeCompare(lastNameKey(b), "de")); }
 
   const loaded = loadClasses();
   let classes = loaded.classes;
@@ -1828,6 +1838,78 @@ width: 28px; height: 24px;}
 
   document.getElementById("addPupilBtn").addEventListener("click", addPupil);
   document.getElementById("newPupilInput").addEventListener("keydown", (e) => { if(e.key === "Enter") addPupil(); });
+
+  // ---- Schüler-Import per CSV (Spalten: Vorname; Nachname) ----
+  const PUPIL_CSV_EXPECTED_HEADER = ["vorname", "nachname"];
+
+  function parsePupilsCSV(text){
+    const rows = parseCSV(text);
+    if(!rows.length) return { headerOk: false, names: [], skipped: 0 };
+    const header = rows[0].map(h => h.trim().toLowerCase());
+    const headerOk = PUPIL_CSV_EXPECTED_HEADER.every((h, i) => header[i] === h);
+    if(!headerOk) return { headerOk: false, names: [], skipped: 0 };
+
+    const names = [];
+    let skipped = 0;
+    rows.slice(1).forEach(r => {
+      const vorname = (r[0] || "").trim();
+      const nachname = (r[1] || "").trim();
+      const name = [vorname, nachname].filter(Boolean).join(" ");
+      if(!name){ skipped++; return; }
+      names.push(name);
+    });
+    return { headerOk: true, names, skipped };
+  }
+
+  document.getElementById("importPupilsCsvBtn").addEventListener("click", () => {
+    document.getElementById("importPupilsCsvInput").click();
+  });
+
+  document.getElementById("importPupilsCsvInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      e.target.value = "";
+      const result = parsePupilsCSV(String(reader.result));
+      if(!result.headerOk){
+        showToast('CSV hat nicht das erwartete Format (Spalten: Vorname; Nachname).');
+        return;
+      }
+      if(result.names.length === 0){
+        showToast("Es konnten keine gültigen Namen aus der Datei gelesen werden.");
+        return;
+      }
+
+      const c = activeClass();
+      const existingLower = new Set(c.pupils.map(p => p.trim().toLowerCase()));
+      const added = [];
+      result.names.forEach(name => {
+        const key = name.toLowerCase();
+        if(existingLower.has(key)) return;
+        existingLower.add(key);
+        c.pupils.push(name);
+        added.push(name);
+      });
+      sortPupils(c);
+      saveClasses();
+      refreshChrome();
+
+      const skippedDup = result.names.length - added.length;
+      const parts = [`${added.length} Schüler hinzugefügt`];
+      if(skippedDup) parts.push(`${skippedDup} bereits vorhanden übersprungen`);
+      if(result.skipped) parts.push(`${result.skipped} Zeilen übersprungen`);
+      showToast(parts.join(", ") + ".", () => {
+        added.forEach(name => {
+          const idx = c.pupils.indexOf(name);
+          if(idx !== -1) c.pupils.splice(idx, 1);
+        });
+        saveClasses();
+        refreshChrome();
+      });
+    };
+    reader.readAsText(file, "UTF-8");
+  });
 
   // ---- Alle Daten löschen ----
   document.getElementById("deleteAllBtn").addEventListener("click", () => {
