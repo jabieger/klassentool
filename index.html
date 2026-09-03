@@ -303,7 +303,7 @@ width: 28px; height: 24px;}
   .pill.p5{ border:1.5px solid var(--line); }
   .pill.p5.on{ background:#C0453A; color:#fff; }
 
-  .bottombar{ position:sticky; bottom:0; margin-top:22px; padding:0 18px; }
+  .bottombar{ position:sticky; bottom:0; margin-top:22px; padding:0 18px; z-index:10; background:var(--bg); }
   .btn{ width:100%; border:none; border-radius:var(--radius); padding:14px; font-size:15px; font-weight:700; cursor:pointer; }
   .btn.primary{ background:var(--ink); color:#fff; }
 
@@ -606,7 +606,7 @@ width: 28px; height: 24px;}
 <div id="erfassungView">
 <div class="cl-toolbar" id="clToolbar">
   <div class="cl-newname">
-    <input type="text" id="clNewNameInput" value="Neue Liste">
+    <input type="text" id="clNewNameInput" placeholder="Neue Liste">
     <button class="cl-addbtn" id="clAddBtn" title="Neue Checkliste anlegen">+</button>
   </div>
   <span class="cl-archive-line" id="clArchiveLine" style="display:none;"></span>
@@ -1240,7 +1240,7 @@ width: 28px; height: 24px;}
         <td class="cl-cell">
           <div class="cl-cellinner">
             <span class="cl-circle ${entry.checked?'on':'off'}" data-action="clcheck" data-cl="${cl.id}" data-p="${p}">${entry.checked ? '✓' : ''}</span>
-            <input class="cl-note" data-action="clnote" data-cl="${cl.id}" data-p="${p}" placeholder="…" value="${escapeHTML(entry.note)}" style="width:${w}ch;" autocomplete="off">
+            <input class="cl-note" data-action="clnote" data-cl="${cl.id}" data-p="${p}" value="${escapeHTML(entry.note)}" style="width:${w}ch;" autocomplete="off">
           </div>
         </td>
       `;
@@ -2833,7 +2833,7 @@ width: 28px; height: 24px;}
     const c = activeClass();
     c.checklisten.push({ id:"cl" + Date.now(), name, hidden:false, items:{} });
     saveClasses();
-    input.value = "Neue Liste";
+    input.value = "";
     renderTable();
   }
 
