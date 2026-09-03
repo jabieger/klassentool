@@ -131,14 +131,44 @@
 
   .header-controls{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
 
-  .muendl-toggle-wrap{ display:flex; align-items:center; gap:7px; }
-  .muendl-toggle-wrap .toggle-label{ font-size:12px; font-weight:600; color:var(--muted); white-space:nowrap; }
-  .switch{ position:relative; display:inline-block; width:40px; height:24px; flex-shrink:0; }
-  .switch input{ opacity:0; width:0; height:0; }
-  .switch .slider{ position:absolute; inset:0; background-color:var(--line); border-radius:999px; cursor:pointer; transition:background-color .18s ease; }
-  .switch .slider::before{ content:""; position:absolute; height:18px; width:18px; left:3px; top:3px; background-color:#fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.25); transition:transform .18s ease; }
-  .switch input:checked + .slider{ background-color:var(--ink); }
-  .switch input:checked + .slider::before{ transform:translateX(16px); }
+  /* ---- Umschalter Mündlich / Checklisten ---- */
+  .datamode-toggle{ display:flex; background:var(--stripe); border:1px solid var(--line); border-radius:10px; padding:2px; }
+  .datamode-toggle button{ border:none; background:transparent; padding:7px 12px; font-size:12px; font-weight:700; color:var(--muted); border-radius:8px; cursor:pointer; white-space:nowrap; }
+  .datamode-toggle button.active{ background:var(--ink); color:#fff; }
+
+  /* ---- Checklisten (Erfassung) ---- */
+  .cl-toolbar{ display:none; align-items:center; gap:14px; flex-wrap:wrap; padding:0 18px 12px; }
+  .cl-toolbar.show{ display:flex; }
+  .cl-newname{ display:flex; align-items:center; gap:6px; }
+  .cl-newname input{ border:1.5px solid var(--line); border-radius:8px; padding:6px 9px; font:inherit; font-size:12.5px; color:var(--ink); background:var(--surface); width:130px; }
+  .cl-addbtn{ border:none; background:var(--ink); color:#fff; border-radius:8px; width:28px; height:28px; font-size:16px; cursor:pointer; line-height:1; flex-shrink:0; }
+  .cl-archive-line{ font-size:12px; color:var(--muted); cursor:pointer; }
+  .cl-archive-panel{ display:none; margin:0 18px 12px; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:2px 12px; }
+  .cl-archive-panel.show{ display:block; }
+  .cl-archive-row{ display:flex; align-items:center; justify-content:space-between; padding:8px 0; font-size:13px; border-bottom:1px solid var(--line); }
+  .cl-archive-row:last-child{ border-bottom:none; }
+  .cl-archive-row .status{ color:var(--muted); font-weight:500; font-size:11.5px; }
+  .cl-archive-row .actions{ display:flex; gap:12px; flex-shrink:0; }
+  .cl-archive-row button{ border:none; background:transparent; font-size:12px; font-weight:700; cursor:pointer; padding:0; }
+  .cl-archive-row .show-btn{ color:var(--accent); }
+  .cl-archive-row .del-btn{ color:var(--hw); }
+
+  .cl-banner{ display:none; margin:0 18px 12px; background:#E4EAFB; border:1px solid var(--accent); border-radius:10px; padding:10px 14px; font-size:13px; }
+  .cl-banner.show{ display:block; }
+  .cl-banner .actions{ display:flex; gap:8px; margin-top:8px; }
+  .cl-banner button{ border:none; border-radius:7px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; }
+  .cl-banner .yes{ background:var(--ink); color:#fff; }
+  .cl-banner .no{ background:var(--surface); color:var(--ink); border:1px solid var(--line); }
+
+  th.cl-th{ text-align:left; }
+  .clhead{ display:flex; align-items:center; gap:4px; overflow:hidden; text-transform:none; font-weight:700; font-size:11px; letter-spacing:0; }
+  .clname{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .clhide{ font-size:11px; color:var(--muted); cursor:pointer; flex-shrink:0; }
+  .cl-cell{ width:90px; text-align:left; padding:8px 10px; }
+  .cl-cellinner{ display:flex; align-items:center; gap:6px; }
+  .cl-circle{ width:17px; height:17px; flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--ink); }
+  .cl-circle.off{ border-radius:50%; border:1.5px solid #D9776B; background:#F5E3D8; }
+  .cl-note{ border:none; border-bottom:1px dashed var(--line); background:transparent; font:inherit; font-size:11.5px; color:var(--ink); padding:2px 0; min-width:0; }
 
   .datepicker{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); font-weight:600; }
   .datepicker .weekday{ text-transform:capitalize; }
@@ -272,8 +302,6 @@ width: 28px; height: 24px;}
   .pill.p4.on{ background:#E3A574; color:#5C3313; }
   .pill.p5{ border:1.5px solid var(--line); }
   .pill.p5.on{ background:#C0453A; color:#fff; }
-
-  body.hide-muendl .muendl-col{ display:none; }
 
   .bottombar{ position:sticky; bottom:0; margin-top:22px; padding:0 18px; }
   .btn{ width:100%; border:none; border-radius:var(--radius); padding:14px; font-size:15px; font-weight:700; cursor:pointer; }
@@ -562,12 +590,9 @@ width: 28px; height: 24px;}
     </div>
   </div>
   <div class="header-controls">
-    <div class="muendl-toggle-wrap" title="Mündlich-Spalte ein-/ausblenden">
-      <span class="toggle-label">Mündlich</span>
-      <label class="switch">
-        <input type="checkbox" id="muendlToggle" checked>
-        <span class="slider"></span>
-      </label>
+    <div class="datamode-toggle" id="dataModeToggle">
+      <button class="active" data-mode="muendl">🗣️ Mündlich</button>
+      <button data-mode="checklisten">✅ Checklisten</button>
     </div>
     <div class="datepicker">
       <span class="weekday" id="weekdayLabel"></span>
@@ -579,15 +604,23 @@ width: 28px; height: 24px;}
 </header>
 
 <div id="erfassungView">
+<div class="cl-toolbar" id="clToolbar">
+  <div class="cl-newname">
+    <input type="text" id="clNewNameInput" value="Neue Liste">
+    <button class="cl-addbtn" id="clAddBtn" title="Neue Checkliste anlegen">+</button>
+  </div>
+  <span class="cl-archive-line" id="clArchiveLine" style="display:none;"></span>
+</div>
+<div class="cl-archive-panel" id="clArchivePanel"></div>
+<div class="cl-banner" id="clBanner"></div>
 <div class="wrap">
   <table>
     <thead>
-      <tr>
+      <tr id="theadRow">
         <th class="namehead">Schüler</th>
         <th><span class="icon">📕</span>HA</th>
         <th><span class="icon">🎒</span>Material</th>
         <th><span class="icon">💬</span>Sonstiges</th>
-        <th class="muendl-col"><span class="icon">🗣️</span>Mündlich</th>
       </tr>
     </thead>
     <tbody id="tbody"></tbody>
@@ -962,6 +995,27 @@ width: 28px; height: 24px;}
     });
   }
 
+  // ---- Checklisten: Datenmodell pro Klasse (mehrere gleichzeitig sichtbar, unabhängig vom Tagesdatum) ----
+  function ensureChecklisten(c){
+    if(!Array.isArray(c.checklisten)) c.checklisten = [];
+  }
+  // Entfernt Checklisten-Einträge für Schüler, die nicht mehr in der Klasse sind
+  function syncChecklistenWithPupils(c){
+    const validSet = new Set(c.pupils);
+    (c.checklisten || []).forEach(cl => {
+      Object.keys(cl.items).forEach(name => { if(!validSet.has(name)) delete cl.items[name]; });
+    });
+  }
+  // Überträgt eine Schüler-Umbenennung in alle Checklisten der Klasse
+  function renamePupilInChecklisten(c, oldName, newName){
+    (c.checklisten || []).forEach(cl => {
+      if(cl.items.hasOwnProperty(oldName)){
+        cl.items[newName] = cl.items[oldName];
+        delete cl.items[oldName];
+      }
+    });
+  }
+
   const loaded = loadClasses();
   let classes = loaded.classes;
   let activeClassId = loaded.activeClassId;
@@ -969,6 +1023,7 @@ width: 28px; height: 24px;}
   sortClasses();
   classes.forEach(sortPupils);
   classes.forEach(ensureSitzplaene);
+  classes.forEach(ensureChecklisten);
 
   let nextClassNum = classes.reduce((max, c) => {
     const m = /^c(\d+)$/.exec(c.id);
@@ -1130,12 +1185,51 @@ width: 28px; height: 24px;}
     const tbody = document.getElementById("tbody");
     tbody.innerHTML = "";
 
+    // ---- Kopfzeile: letzte Spalte(n) je nach Modus neu aufbauen ----
+    const theadRow = document.getElementById("theadRow");
+    theadRow.querySelectorAll(".dyn-th").forEach(el => el.remove());
+    if(dataMode === "muendl"){
+      const th = document.createElement("th");
+      th.className = "dyn-th";
+      th.innerHTML = `<span class="icon">🗣️</span>Mündlich`;
+      theadRow.appendChild(th);
+    } else {
+      activeChecklisten().forEach(cl => {
+        const th = document.createElement("th");
+        th.className = "dyn-th cl-th";
+        th.innerHTML = `<span class="clhead"><span class="clname">${escapeHTML(cl.name)}</span><span class="clhide" data-cl="${cl.id}" title="Checkliste ausblenden">✕</span></span>`;
+        theadRow.appendChild(th);
+      });
+      theadRow.querySelectorAll(".clhide").forEach(el => {
+        el.addEventListener("click", () => hideChecklist(el.dataset.cl));
+      });
+    }
+
     pupils.forEach((p, i) => {
       const hwOn = day.hw.includes(p);
       const matKey = day.mat[p];
       const matOpt = matKey ? matByKey[matKey] : null;
       const note = day.sonst[p] || "";
       const muendlVal = day.muendl.hasOwnProperty(p) ? day.muendl[p] : null;
+
+      const trailingHTML = dataMode === "muendl" ? `
+        <td class="muendlcell">
+          <div class="pillrow" data-p="${p}">
+            ${pillDefs.map(d => `<button class="pill p${d.value} ${muendlVal===d.value?'on':''}" data-action="muendl" data-p="${p}" data-v="${d.value}">${d.label}</button>`).join("")}
+          </div>
+        </td>
+      ` : activeChecklisten().map(cl => {
+        const entry = clEntry(cl, p);
+        const w = Math.max(2.5, Math.min(9, entry.note.length + 1));
+        return `
+        <td class="cl-cell">
+          <div class="cl-cellinner">
+            <span class="cl-circle ${entry.checked?'on':'off'}" data-action="clcheck" data-cl="${cl.id}" data-p="${p}">${entry.checked ? '✓' : ''}</span>
+            <input class="cl-note" data-action="clnote" data-cl="${cl.id}" data-p="${p}" placeholder="…" value="${escapeHTML(entry.note)}" style="width:${w}ch;" autocomplete="off">
+          </div>
+        </td>
+      `;
+      }).join("");
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -1147,12 +1241,6 @@ width: 28px; height: 24px;}
             ${matOpt ? `<span class="matlabel">${matOpt.icon} ${matOpt.label}</span>` : `<span class="dot_mat">+</span>`}
           </div>
         </td>
-
-<!--
-        <td class="sonstcell">
-          <input class="noteinput ${note.trim()!==''?'filled':''}" data-action="note" data-p="${p}" placeholder="" value="${note}">
-        </td>
--->
 
         <td class="sonstcell">
           <div class="note-wrap">
@@ -1170,15 +1258,7 @@ width: 28px; height: 24px;}
           </div>
         </td>
 
-
-
-
-        <td class="muendlcell muendl-col">
-          <div class="pillrow" data-p="${p}">
-            ${pillDefs.map(d => `<button class="pill p${d.value} ${muendlVal===d.value?'on':''}" data-action="muendl" data-p="${p}" data-v="${d.value}">${d.label}</button>`).join("")}
-          </div>
-        </td>
-        <td></td>
+        ${trailingHTML}
       `;
       tbody.appendChild(tr);
     });
@@ -1218,6 +1298,18 @@ width: 28px; height: 24px;}
     tbody.querySelectorAll("[data-action='muendl']").forEach(el => {
       el.addEventListener("click", () => setMuendl(el.dataset.p, Number(el.dataset.v)));
     });
+
+    tbody.querySelectorAll("[data-action='clcheck']").forEach(el => {
+      el.addEventListener("click", () => toggleClCheck(el.dataset.cl, el.dataset.p));
+    });
+    tbody.querySelectorAll("[data-action='clnote']").forEach(el => {
+      el.addEventListener("input", () => {
+        updateClNote(el.dataset.cl, el.dataset.p, el.value);
+        el.style.width = Math.max(2.5, Math.min(9, el.value.length + 1)) + "ch";
+      });
+    });
+
+    renderClToolbar();
   }
 
   // ---- Übersicht ----
@@ -1490,21 +1582,6 @@ width: 28px; height: 24px;}
   datePicker.addEventListener("change", () => { if(datePicker.value) applyDate(datePicker.value); });
   todayBtn.addEventListener("click", () => applyDate(todayISO()));
 
-  // ---- Mündlich-Spalte ein-/ausblenden ----
-  const MUENDL_VISIBLE_KEY = "klassentool_muendl_sichtbar";
-  const muendlToggle = document.getElementById("muendlToggle");
-  function applyMuendlVisibility(visible){
-    document.body.classList.toggle("hide-muendl", !visible);
-  }
-  const storedVisible = localStorage.getItem(MUENDL_VISIBLE_KEY);
-  const initialVisible = storedVisible === null ? true : storedVisible === "1";
-  muendlToggle.checked = initialVisible;
-  applyMuendlVisibility(initialVisible);
-  muendlToggle.addEventListener("change", () => {
-    applyMuendlVisibility(muendlToggle.checked);
-    localStorage.setItem(MUENDL_VISIBLE_KEY, muendlToggle.checked ? "1" : "0");
-  });
-
   // ---- Klassen-Dropdown im Header ----
   const classpicker = document.getElementById("classpicker");
   const classpickerBtn = document.getElementById("classpickerBtn");
@@ -1665,6 +1742,7 @@ width: 28px; height: 24px;}
     const id = "c" + (nextClassNum++);
     const c = { id, name, pupils: [], data: {} };
     ensureSitzplaene(c);
+    ensureChecklisten(c);
     classes.push(c);
     sortClasses();
     activateClass(id);
@@ -1710,6 +1788,7 @@ width: 28px; height: 24px;}
         if(!confirm(`„${p}" wirklich aus der Klasse entfernen?`)) return;
         c.pupils.splice(idx, 1);
         syncSitzplaeneWithPupils(c);
+        syncChecklistenWithPupils(c);
         saveClasses();
         refreshChrome();
       });
@@ -1736,6 +1815,7 @@ width: 28px; height: 24px;}
       if(val && val !== oldName){
         c.pupils[idx] = val;
         renamePupilInSitzplaene(c, oldName, val);
+        renamePupilInChecklisten(c, oldName, val);
       }
       sortPupils(c);
       saveClasses();
@@ -1920,6 +2000,7 @@ width: 28px; height: 24px;}
     if(!c){
       c = { id: "c" + (nextClassNum++), name, pupils: [], data: {} };
       ensureSitzplaene(c);
+      ensureChecklisten(c);
       classes.push(c);
     }
     return c;
@@ -2114,6 +2195,7 @@ width: 28px; height: 24px;}
 
     classes = [{ id: "c1", name: "Beispiel-Klasse", pupils: [...DEFAULT_PUPILS], data: {} }];
     ensureSitzplaene(classes[0]);
+    ensureChecklisten(classes[0]);
     activeClassId = "c1";
     nextClassNum = 2;
     activateClass(activeClassId);
@@ -2672,6 +2754,151 @@ width: 28px; height: 24px;}
       if(currentView === "sitzplan") renderSitzplanView();
     });
   });
+
+  // ==================================================================
+  // ---- Checklisten (mehrere pro Klasse, unabhängig vom Tagesdatum) ----
+  // ==================================================================
+  const DATA_MODE_KEY = "klassentool_datenmodus";
+  let dataMode = localStorage.getItem(DATA_MODE_KEY) === "checklisten" ? "checklisten" : "muendl";
+  let clArchiveOpen = false;
+
+  function activeChecklisten(){ return (activeClass().checklisten || []).filter(cl => !cl.hidden); }
+  function hiddenChecklisten(){ return (activeClass().checklisten || []).filter(cl => cl.hidden); }
+  function clEntry(cl, pupil){ return cl.items[pupil] || { checked:false, note:"" }; }
+  function clIsComplete(cl){ return pupils.length > 0 && pupils.every(p => clEntry(cl, p).checked); }
+
+  function toggleClCheck(clId, pupil){
+    const cl = activeClass().checklisten.find(x => x.id === clId);
+    if(!cl) return;
+    if(!cl.items[pupil]) cl.items[pupil] = { checked:false, note:"" };
+    cl.items[pupil].checked = !cl.items[pupil].checked;
+    saveClasses();
+    renderTable();
+    if(cl.items[pupil].checked && clIsComplete(cl)) showClCompleteBanner(cl);
+  }
+
+  function updateClNote(clId, pupil, value){
+    const cl = activeClass().checklisten.find(x => x.id === clId);
+    if(!cl) return;
+    if(!cl.items[pupil]) cl.items[pupil] = { checked:false, note:"" };
+    cl.items[pupil].note = value;
+    saveClasses();
+  }
+
+  function hideChecklist(clId){
+    const cl = activeClass().checklisten.find(x => x.id === clId);
+    if(!cl) return;
+    cl.hidden = true;
+    saveClasses();
+    renderTable();
+  }
+
+  function unhideChecklist(clId){
+    const cl = activeClass().checklisten.find(x => x.id === clId);
+    if(!cl) return;
+    cl.hidden = false;
+    saveClasses();
+    renderTable();
+  }
+
+  function deleteChecklist(clId){
+    const c = activeClass();
+    const cl = c.checklisten.find(x => x.id === clId);
+    if(!cl) return;
+    if(!confirm(`Checkliste „${cl.name}" wirklich endgültig löschen? Das kann nicht rückgängig gemacht werden.`)) return;
+    c.checklisten = c.checklisten.filter(x => x.id !== clId);
+    saveClasses();
+    renderTable();
+  }
+
+  function addChecklist(){
+    const input = document.getElementById("clNewNameInput");
+    const name = input.value.trim() || "Neue Liste";
+    const c = activeClass();
+    c.checklisten.push({ id:"cl" + Date.now(), name, hidden:false, items:{} });
+    saveClasses();
+    input.value = "Neue Liste";
+    renderTable();
+  }
+
+  function showClCompleteBanner(cl){
+    const banner = document.getElementById("clBanner");
+    banner.innerHTML = `
+      <div>Alle Schüler bei „${escapeHTML(cl.name)}" sind abgehakt. Liste ausblenden?</div>
+      <div class="actions">
+        <button class="yes" id="clHideYes">Ja, ausblenden</button>
+        <button class="no" id="clHideNo">Sichtbar lassen</button>
+      </div>
+    `;
+    banner.classList.add("show");
+    document.getElementById("clHideYes").addEventListener("click", () => {
+      hideChecklist(cl.id);
+      banner.classList.remove("show");
+    });
+    document.getElementById("clHideNo").addEventListener("click", () => {
+      banner.classList.remove("show");
+    });
+  }
+
+  function renderClArchivePanel(){
+    const panel = document.getElementById("clArchivePanel");
+    if(!clArchiveOpen){ panel.classList.remove("show"); return; }
+    const hidden = hiddenChecklisten();
+    if(!hidden.length){ panel.classList.remove("show"); return; }
+    panel.classList.add("show");
+    panel.innerHTML = hidden.map(cl => `
+      <div class="cl-archive-row">
+        <span>${escapeHTML(cl.name)}${clIsComplete(cl) ? "" : ' <span class="status">(unvollständig)</span>'}</span>
+        <span class="actions">
+          <button class="show-btn" data-act="show" data-cl="${cl.id}">Wieder einblenden</button>
+          <button class="del-btn" data-act="del" data-cl="${cl.id}">Löschen</button>
+        </span>
+      </div>
+    `).join("");
+    panel.querySelectorAll("button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if(btn.dataset.act === "show") unhideChecklist(btn.dataset.cl);
+        else deleteChecklist(btn.dataset.cl);
+      });
+    });
+  }
+
+  function renderClToolbar(){
+    const toolbar = document.getElementById("clToolbar");
+    const archiveLine = document.getElementById("clArchiveLine");
+    toolbar.classList.toggle("show", dataMode === "checklisten");
+    if(dataMode !== "checklisten"){
+      document.getElementById("clArchivePanel").classList.remove("show");
+      return;
+    }
+    const hiddenCount = hiddenChecklisten().length;
+    if(hiddenCount > 0){
+      archiveLine.style.display = "inline";
+      archiveLine.textContent = (clArchiveOpen ? "▾ " : "▸ ") + hiddenCount + " ausgeblendete Checkliste" + (hiddenCount > 1 ? "n" : "");
+    } else {
+      archiveLine.style.display = "none";
+      clArchiveOpen = false;
+    }
+    renderClArchivePanel();
+  }
+
+  document.getElementById("clAddBtn").addEventListener("click", addChecklist);
+  document.getElementById("clNewNameInput").addEventListener("keydown", (e) => { if(e.key === "Enter") addChecklist(); });
+  document.getElementById("clArchiveLine").addEventListener("click", () => {
+    clArchiveOpen = !clArchiveOpen;
+    renderClToolbar();
+  });
+
+  function applyDataMode(mode){
+    dataMode = mode;
+    localStorage.setItem(DATA_MODE_KEY, mode);
+    document.querySelectorAll("#dataModeToggle button").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+    renderTable();
+  }
+  document.querySelectorAll("#dataModeToggle button").forEach(btn => {
+    btn.addEventListener("click", () => applyDataMode(btn.dataset.mode));
+  });
+  document.querySelectorAll("#dataModeToggle button").forEach(b => b.classList.toggle("active", b.dataset.mode === dataMode));
 
   classpickerLabel.textContent = activeClass().name;
   applyDate(todayISO());
