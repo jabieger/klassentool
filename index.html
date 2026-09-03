@@ -137,12 +137,18 @@
   .datamode-toggle button.active{ background:var(--ink); color:#fff; }
 
   /* ---- Checklisten (Erfassung) ---- */
-  .cl-toolbar{ display:none; align-items:center; gap:14px; flex-wrap:wrap; padding:0 18px 12px; }
-  .cl-toolbar.show{ display:flex; }
+  .cl-toolbar{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:12px 18px; }
+  .cl-toolbar-left{ display:none; align-items:center; gap:14px; flex-wrap:wrap; }
+  .cl-toolbar-left.show{ display:flex; }
   .cl-newname{ display:flex; align-items:center; gap:6px; }
-  .cl-newname input{ border:1.5px solid var(--line); border-radius:8px; padding:6px 9px; font:inherit; font-size:12.5px; color:var(--ink); background:var(--surface); width:130px; }
+  .cl-newname input{ border:1.5px solid var(--line); border-radius:8px; padding:0 9px; height:28px; font:inherit; font-size:12.5px; color:var(--ink); background:var(--surface); width:130px; }
   .cl-addbtn{ border:none; background:var(--ink); color:#fff; border-radius:8px; width:28px; height:28px; font-size:16px; cursor:pointer; line-height:1; flex-shrink:0; }
   .cl-archive-line{ font-size:12px; color:var(--muted); cursor:pointer; }
+  .cl-overview-btn{
+    margin-left:auto; flex-shrink:0; border:none; border-radius:8px; background:var(--ink); color:#fff;
+    height:28px; display:inline-flex; align-items:center; padding:0 16px; font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+  .cl-overview-btn:active{ transform:scale(0.97); }
   .cl-archive-panel{ display:none; margin:0 18px 12px; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:2px 12px; }
   .cl-archive-panel.show{ display:block; }
   .cl-archive-row{ display:flex; align-items:center; justify-content:space-between; padding:8px 0; font-size:13px; border-bottom:1px solid var(--line); }
@@ -303,9 +309,6 @@ width: 28px; height: 24px;}
   .pill.p5{ border:1.5px solid var(--line); }
   .pill.p5.on{ background:#C0453A; color:#fff; }
 
-  .bottombar{ position:sticky; bottom:0; margin-top:22px; padding:0 18px; z-index:10; background:var(--bg); }
-  .btn{ width:100%; border:none; border-radius:var(--radius); padding:14px; font-size:15px; font-weight:700; cursor:pointer; }
-  .btn.primary{ background:var(--ink); color:#fff; }
 
   footer{ text-align:center; color:var(--muted); font-size:11.5px; margin-top:20px; padding:0 16px; }
 
@@ -605,11 +608,14 @@ width: 28px; height: 24px;}
 
 <div id="erfassungView">
 <div class="cl-toolbar" id="clToolbar">
-  <div class="cl-newname">
-    <input type="text" id="clNewNameInput" placeholder="Neue Liste">
-    <button class="cl-addbtn" id="clAddBtn" title="Neue Checkliste anlegen">+</button>
+  <div class="cl-toolbar-left" id="clToolbarLeft">
+    <div class="cl-newname">
+      <input type="text" id="clNewNameInput" placeholder="Neue Liste">
+      <button class="cl-addbtn" id="clAddBtn" title="Neue Checkliste anlegen">+</button>
+    </div>
+    <span class="cl-archive-line" id="clArchiveLine" style="display:none;"></span>
   </div>
-  <span class="cl-archive-line" id="clArchiveLine" style="display:none;"></span>
+  <button class="cl-overview-btn" id="overviewBtn">Übersicht</button>
 </div>
 <div class="cl-archive-panel" id="clArchivePanel"></div>
 <div class="cl-banner" id="clBanner"></div>
@@ -626,10 +632,6 @@ width: 28px; height: 24px;}
     </thead>
     <tbody id="tbody"></tbody>
   </table>
-</div>
-
-<div class="bottombar">
-  <button class="btn primary" id="overviewBtn">Übersicht</button>
 </div>
 </div>
 
@@ -2880,9 +2882,9 @@ width: 28px; height: 24px;}
   }
 
   function renderClToolbar(){
-    const toolbar = document.getElementById("clToolbar");
+    const toolbarLeft = document.getElementById("clToolbarLeft");
     const archiveLine = document.getElementById("clArchiveLine");
-    toolbar.classList.toggle("show", dataMode === "checklisten");
+    toolbarLeft.classList.toggle("show", dataMode === "checklisten");
     if(dataMode !== "checklisten"){
       document.getElementById("clArchivePanel").classList.remove("show");
       return;
