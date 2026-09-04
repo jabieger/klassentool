@@ -381,6 +381,9 @@
   }catch(e){}
   let currentWinner = urlParams.get('winner') || null;
 
+  // Im Kapsel-Text erscheint nur der Vorname, der volle Name bleibt im Status darunter sichtbar.
+  function firstName(n){ return (n || "").trim().split(/\s+/)[0] || n; }
+
   function shuffled(arr) {
     const a = arr.slice();
     for (let i = a.length - 1; i > 0; i--) {
@@ -728,7 +731,7 @@
     // Angezeigt wird der vom Klassentool vorbestimmte Gewinner-Name (falls übergeben) -
     // welche Kugel optisch herausfällt ist rein dekorativ und ohne Bezug dazu.
     const name = currentWinner || NAMES[Math.floor(Math.random() * NAMES.length)];
-    nameText.textContent = name;
+    nameText.textContent = firstName(name);
     capsule.classList.add('open');
 
     statusEl.textContent = name;
