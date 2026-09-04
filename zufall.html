@@ -568,6 +568,7 @@
   }
 
   async function fillUrn() {
+    if (fillBtn.disabled) return;
     fillBtn.disabled = true;
 
     // Namen verschwinden, Deckel öffnet sich
@@ -741,25 +742,36 @@
   }
 
   async function performDraw() {
+    if (drawBtn.disabled) return;
     if (capsule.classList.contains('open')) {
       resetCapsule();
       createBalls(false);
       statusEl.textContent = '';
       await wait(50);
     }
-    draw();
+    return draw();
   }
 
   drawBtn.addEventListener('click', performDraw);
   fillBtn.addEventListener('click', fillUrn);
 
-  // ---- Vom Klassentool aus dem umgebenden Fenster aufrufbar (selber Origin):
-  // zieht mit neuem, vorbestimmtem Namen erneut, ohne die Urne zu leeren.
-  window.setWinnerAndDraw = function(name){
-    if (drawBtn.disabled) return; // Urne noch nicht befüllt
-    currentWinner = name;
-    performDraw();
+  // ---- Vom Klassentool aus dem umgebenden Fenster aufrufbar (selber Origin) ----
+  // Startet das Befüllen der Urne, ohne einen Schüler zu bestimmen.
+  window.startCollect = function(){
+    return fillUrn();
   };
+  // Bestimmt keinen Schüler selbst - der Name wird vom Klassentool vorgegeben und treibt
+  // nur an, welcher Name in der Kapsel erscheint; welche Kugel optisch fällt ist dekorativ.
+  window.drawWithWinner = function(name){
+    currentWinner = name;
+    return performDraw();
+  };
+
+  // Im eingebetteten Modus (Steuerung über das Klassentool-Toolbar) werden die eigenen
+  // Buttons ausgeblendet; beim eigenständigen Öffnen der Datei bleiben sie nutzbar.
+  if (urlParams.get('embedded') === '1') {
+    document.querySelector('.controls').style.display = 'none';
+  }
 
   setupIntro();
 </script>

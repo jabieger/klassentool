@@ -1,8 +1,9 @@
-const CACHE_NAME = "klassentool-v3";
+const CACHE_NAME = "klassentool-v4";
 const ASSETS = [
   "./",
   "./index.html",
   "./zufall.html",
+  "./karten.html",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

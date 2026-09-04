@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Kartenziehung</title>
+<style>
+  :root{
+    --bg: #FAFAF700;
+    --line: rgba(0,0,0,0.22);
+    --card-face: #FFFFFF;
+    --card-back: #ECE7DC;
+    --card-back-pattern: rgba(0,0,0,0.06);
+    --accent: #6b6b6b;
+    --gold: #ca8e31;
+    --text: #000000;
+    --muted: #82868a;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+
+  body {
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text);
+  }
+
+  .stage-wrap { text-align: center; }
+
+  .stage { position: relative; margin: 0 auto 24px; }
+
+  /* Ebene 1: Position (Grid-Zelle oder gemeinsamer Stapel-Pivot) */
+  .pivot {
+    position: absolute;
+    width: 0;
+    height: 0;
+    transition: left 0.85s cubic-bezier(.4,.1,.2,1), top 0.85s cubic-bezier(.4,.1,.2,1);
+  }
+
+  /* Ebene 2: Fächer-Rotation + Abstand vom Pivot */
+  .fan {
+    position: absolute;
+    transform-origin: 50% 100%;
+    transition: transform 0.9s cubic-bezier(.3,.6,.3,1);
+  }
+
+  /* Ebene 3: kleine Wackel-Bewegung beim Mischen */
+  .jiggle { position: absolute; inset: 0; }
+  .jiggle.shuffling { animation: shuffle-jiggle 1.3s ease-in-out; }
+
+  @keyframes shuffle-jiggle {
+    0%   { transform: translate(0,0) rotate(0deg); }
+    8%   { transform: translate(var(--j1x), var(--j1y)) rotate(var(--j1r)); }
+    18%  { transform: translate(var(--j2x), var(--j2y)) rotate(var(--j2r)); }
+    30%  { transform: translate(var(--j3x), var(--j3y)) rotate(var(--j3r)); }
+    44%  { transform: translate(var(--j4x), var(--j4y)) rotate(var(--j4r)); }
+    58%  { transform: translate(var(--j5x), var(--j5y)) rotate(var(--j5r)); }
+    72%  { transform: translate(var(--j2x), var(--j2y)) rotate(var(--j2r)); animation-timing-function: ease-out; }
+    86%  { transform: translate(var(--j1x), var(--j1y)) rotate(var(--j1r)); }
+    100% { transform: translate(0,0) rotate(0deg); }
+  }
+
+  /* Ebene 4: 3D-Umdrehen der Karte (Name zeigen / verbergen) */
+  .flip {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    transition: transform 0.55s ease;
+  }
+
+  .flip.turned { transform: rotateY(180deg); }
+
+  .face {
+    position: absolute;
+    inset: 0;
+    border-radius: 7px;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+
+  .face.front {
+    background: var(--card-face);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 500;
+    word-break: break-word;
+    transition: border-color 0.3s ease, color 0.3s ease;
+  }
+
+  .face.front.winner {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  .face.back {
+    background:
+      repeating-linear-gradient(135deg, var(--card-back-pattern) 0 2px, transparent 2px 8px),
+      var(--card-back);
+    border: 1px solid var(--line);
+    transform: rotateY(180deg);
+  }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 0.9rem;
+    letter-spacing: 0.03em;
+    padding: 10px 22px;
+    border-radius: 2px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:disabled { opacity: 0.35; cursor: default; }
+
+  .status { margin-top: 18px; min-height: 20px; font-size: 0.85rem; color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .jiggle.shuffling { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage-wrap">
+  <div class="stage" id="stage"></div>
+  <div class="controls">
+    <button id="startBtn">Karten einsammeln</button>
+    <button id="drawBtn" disabled>Karte ziehen</button>
+  </div>
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+  const DEFAULT_NAMES = ['Anna','Lukas','Mia','Paul','Emma','Ben','Lea','Finn','Nora','Jonas',
+                 'Clara','Felix','Lina','Theo','Ida','Marie','Elias','Sophie','Noah','Lotte',
+                 'Anton','Frieda','Jakob','Greta','Oskar','Mila','Leon','Emil','Luisa','Matteo'];
+
+  // ---- Vom Klassentool übergebene Werte: Schülerliste + vorbestimmter Gewinner.
+  // Ohne Parameter (z. B. beim direkten Öffnen der Datei) läuft die Animation
+  // eigenständig mit den Beispielnamen weiter.
+  const urlParams = new URLSearchParams(location.search);
+  let NAMES = DEFAULT_NAMES;
+  try{
+    const namesParam = urlParams.get('names');
+    if(namesParam){
+      const parsed = JSON.parse(namesParam);
+      if(Array.isArray(parsed) && parsed.length) NAMES = parsed;
+    }
+  }catch(e){}
+  let currentWinner = urlParams.get('winner') || null;
+
+  // Im Kartentext erscheint nur der Vorname, der volle Name bleibt im Status darunter sichtbar.
+  function firstName(n){ return (n || "").trim().split(/\s+/)[0] || n; }
+
+  const stage = document.getElementById('stage');
+  const startBtn = document.getElementById('startBtn');
+  const drawBtn = document.getElementById('drawBtn');
+  const statusEl = document.getElementById('status');
+
+  const GAP_X = 12, GAP_Y = 10;
+  const TARGET_W = 380; // Breite, an die sich das Grid unabhängig von der Klassengröße anpasst
+  let CARD_W, CARD_H, COLS, ROWS, STAGE_W, STAGE_H, STACK_X, STACK_Y;
+
+  function rnd(min, max) { return Math.random() * (max - min) + min; }
+  function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function shuffled(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // Legt Spaltenzahl und Kartengröße so fest, dass das Grid bei jeder Klassengröße
+  // in etwa TARGET_W breit bleibt - nur die Zeilenzahl (und damit die Höhe) wächst mit.
+  function layoutStage(n) {
+    COLS = n <= 24 ? 6 : (n <= 32 ? 7 : 8);
+    COLS = Math.min(COLS, Math.max(4, n));
+    CARD_W = Math.floor((TARGET_W - (COLS - 1) * GAP_X) / COLS);
+    CARD_H = Math.round(CARD_W * 1.36);
+    ROWS = Math.ceil(n / COLS);
+    STAGE_W = COLS * CARD_W + (COLS - 1) * GAP_X;
+    STAGE_H = ROWS * CARD_H + (ROWS - 1) * GAP_Y + 210; // Platz für Stapel + Fächer darunter
+    STACK_X = STAGE_W / 2;
+    STACK_Y = STAGE_H - 60;
+    stage.style.width = STAGE_W + 'px';
+    stage.style.height = STAGE_H + 'px';
+  }
+
+  function gridPositions(n) {
+    const offsetX = 0;
+    const offsetY = 8;
+    const positions = [];
+    for (let r = 0; r < ROWS && positions.length < n; r++) {
+      for (let c = 0; c < COLS && positions.length < n; c++) {
+        const x = offsetX + c * (CARD_W + GAP_X) + CARD_W / 2;
+        const y = offsetY + r * (CARD_H + GAP_Y) + CARD_H; // Boden der Zelle (Pivot-Punkt)
+        positions.push({ x, y });
+      }
+    }
+    return positions;
+  }
+
+  let cards = [];
+
+  function buildCards() {
+    layoutStage(NAMES.length);
+    stage.innerHTML = '';
+    cards = [];
+    const names = shuffled(NAMES);
+    const gridPos = gridPositions(names.length);
+
+    names.forEach((name, i) => {
+      const pivot = document.createElement('div');
+      pivot.className = 'pivot';
+      pivot.style.left = gridPos[i].x + 'px';
+      pivot.style.top = gridPos[i].y + 'px';
+      pivot.style.zIndex = i;
+
+      const fan = document.createElement('div');
+      fan.className = 'fan';
+      fan.style.left = -(CARD_W / 2) + 'px';
+      fan.style.top = -CARD_H + 'px';
+      fan.style.width = CARD_W + 'px';
+      fan.style.height = CARD_H + 'px';
+      fan.style.transform = 'rotate(0deg) translateY(0px)';
+
+      const jiggle = document.createElement('div');
+      jiggle.className = 'jiggle';
+
+      const flip = document.createElement('div');
+      flip.className = 'flip';
+
+      const front = document.createElement('div');
+      front.className = 'face front';
+      front.textContent = firstName(name);
+
+      const back = document.createElement('div');
+      back.className = 'face back';
+
+      flip.appendChild(front);
+      flip.appendChild(back);
+      jiggle.appendChild(flip);
+      fan.appendChild(jiggle);
+      pivot.appendChild(fan);
+      stage.appendChild(pivot);
+
+      cards.push({ pivot, fan, jiggle, flip, front, name, fanAngle: 0, fanRadius: 90 });
+    });
+  }
+
+  function setJigglePath(el) {
+    for (let k = 1; k <= 5; k++) {
+      el.style.setProperty(`--j${k}x`, rnd(-16, 16).toFixed(1) + 'px');
+      el.style.setProperty(`--j${k}y`, rnd(-10, 10).toFixed(1) + 'px');
+      el.style.setProperty(`--j${k}r`, rnd(-14, 14).toFixed(1) + 'deg');
+    }
+  }
+
+  async function shuffleFan(duration) {
+    cards.forEach(c => {
+      setJigglePath(c.jiggle);
+      c.jiggle.classList.remove('shuffling');
+      void c.jiggle.offsetWidth;
+      c.jiggle.classList.add('shuffling');
+    });
+    await wait(duration);
+    cards.forEach(c => c.jiggle.classList.remove('shuffling'));
+  }
+
+  // Phase 1 ("Start"): nur Umdrehen + Zusammenziehen auf einen Stapel. Noch kein Mischen,
+  // kein Auffächern, kein Ziehen.
+  async function runIntroSequence() {
+    if (startBtn.disabled) return;
+    startBtn.disabled = true;
+    statusEl.textContent = '';
+
+    // 1) Karten umdrehen - Namen verschwinden, Rückseite zeigt sich
+    cards.forEach((c, i) => {
+      setTimeout(() => c.flip.classList.add('turned'), i * 16);
+    });
+    await wait(500 + cards.length * 16);
+
+    // 2) Zu einem Stapel zusammenziehen (Pivot bewegt sich zur Mitte)
+    statusEl.textContent = 'Die Karten kommen zusammen …';
+    cards.forEach((c, i) => {
+      const jitterRot = rnd(-6, 6);
+      c.pivot.style.zIndex = 100 + i;
+      setTimeout(() => {
+        c.pivot.style.left = STACK_X + 'px';
+        c.pivot.style.top = STACK_Y + 'px';
+        c.fan.style.transform = `rotate(${jitterRot.toFixed(1)}deg) translateY(-4px)`;
+      }, i * 10);
+    });
+    await wait(900 + cards.length * 10);
+
+    statusEl.textContent = '';
+    drawBtn.disabled = false;
+  }
+
+  let lastWinner = null;
+
+  // Legt eine evtl. zuvor gezogene Karte wieder verdeckt auf den Stapel zurück (für den
+  // Fall, dass "Auslosen" erneut geklickt wird, ohne dass zwischendurch "Start" lief).
+  function settleLastWinner() {
+    if (!lastWinner) return;
+    lastWinner.front.classList.remove('winner');
+    lastWinner.flip.classList.add('turned');
+    lastWinner.pivot.style.zIndex = 100 + cards.indexOf(lastWinner);
+    lastWinner = null;
+  }
+
+  // Phase 2 ("Auslosen"): Stapel mischen, auffächern und eine Karte ziehen.
+  async function drawCard() {
+    if (drawBtn.disabled) return;
+    drawBtn.disabled = true;
+    statusEl.textContent = '';
+
+    settleLastWinner();
+    // Alle Karten (auch eine evtl. zuvor aufgefächerte) zunächst als ordentlicher Stapel
+    // ausrichten, bevor neu gemischt wird.
+    cards.forEach(c => {
+      const jitterRot = rnd(-6, 6);
+      c.fan.style.transform = `rotate(${jitterRot.toFixed(1)}deg) translateY(-4px)`;
+    });
+    await wait(400);
+
+    // 3) Mischen - der ganze Stapel wackelt kräftig
+    statusEl.textContent = 'Die Karten werden gemischt …';
+    await shuffleFan(1400);
+
+    // 4) Zu einem Fächer auffalten
+    statusEl.textContent = 'Die Karten werden aufgefächert …';
+    const spread = Math.min(140, 60 + cards.length * 2.6);
+    const start = -spread / 2;
+    const step = cards.length > 1 ? spread / (cards.length - 1) : 0;
+    const radius = 90;
+
+    cards.forEach((c, i) => {
+      const angle = start + step * i;
+      c.fanAngle = angle;
+      c.fanRadius = radius;
+      setTimeout(() => {
+        c.fan.style.transform = `rotate(${angle.toFixed(1)}deg) translateY(-${radius}px)`;
+      }, i * 18);
+    });
+    await wait(850 + cards.length * 18);
+
+    // 5) Ziehen - eine Karte hebt sich über alle anderen und wird umgedreht
+    statusEl.textContent = '';
+    const winner = cards[Math.floor(Math.random() * cards.length)];
+    lastWinner = winner;
+
+    // Karte hebt sich sichtbar über alle anderen Fächerkarten und rückt an ihrer eigenen
+    // Position (gleicher Winkel) weiter vom Fächer-Pivot weg, statt zur Mitte zu fliegen.
+    winner.pivot.style.zIndex = 300;
+    winner.fan.style.transform = `rotate(${winner.fanAngle.toFixed(1)}deg) translateY(-${winner.fanRadius + 40}px) scale(1.15)`;
+
+    await wait(650);
+
+    // Angezeigt wird der vom Klassentool vorbestimmte Gewinner-Name (falls übergeben) -
+    // welche Karte optisch gezogen wird ist rein dekorativ und ohne Bezug dazu.
+    const displayName = currentWinner || NAMES[Math.floor(Math.random() * NAMES.length)];
+    winner.front.textContent = firstName(displayName);
+    winner.front.classList.add('winner');
+    winner.flip.classList.remove('turned');
+
+    await wait(400);
+    statusEl.textContent = displayName;
+
+    await wait(200);
+    drawBtn.disabled = false;
+  }
+
+  startBtn.addEventListener('click', runIntroSequence);
+  drawBtn.addEventListener('click', drawCard);
+
+  // ---- Vom Klassentool aus dem umgebenden Fenster aufrufbar (selber Origin) ----
+  // Startet das Einsammeln der Karten, ohne einen Schüler zu bestimmen.
+  window.startCollect = function(){
+    return runIntroSequence();
+  };
+  // Bestimmt keinen Schüler selbst - der Name wird vom Klassentool vorgegeben und legt nur
+  // fest, welcher Name auf der gezogenen Karte erscheint; welche Karte optisch gezogen wird
+  // ist dekorativ.
+  window.drawWithWinner = function(name){
+    currentWinner = name;
+    return drawCard();
+  };
+
+  // Im eingebetteten Modus (Steuerung über das Klassentool-Toolbar) werden die eigenen
+  // Buttons ausgeblendet; beim eigenständigen Öffnen der Datei bleiben sie nutzbar.
+  if (urlParams.get('embedded') === '1') {
+    document.querySelector('.controls').style.display = 'none';
+  }
+
+  buildCards();
+</script>
+
+</body>
+</html>

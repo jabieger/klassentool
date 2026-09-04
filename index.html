@@ -518,6 +518,10 @@ width: 28px; height: 24px;}
     height:28px; padding:0 14px; font-size:12.5px; font-weight:700; cursor:pointer;
   }
   .zf-toolbar button.zf-secondary{ background:var(--surface); color:var(--ink); border:1.5px solid var(--line); }
+  .zf-toolbar button:disabled{ opacity:.4; cursor:default; }
+  .zf-style-toggle{ display:flex; background:var(--stripe); border:1px solid var(--line); border-radius:9px; padding:2px; flex-shrink:0; margin-left:auto; }
+  .zf-style-toggle button{ border:none; background:transparent; height:24px; padding:0 10px; font-size:12.5px; font-weight:700; color:var(--muted); border-radius:7px; cursor:pointer; white-space:nowrap; }
+  .zf-style-toggle button.active{ background:var(--ink); color:#fff; }
   .zf-history-panel{ display:none; margin:0 18px 12px; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:2px 12px; }
   .zf-history-panel.show{ display:block; }
   .zf-history-row{ display:grid; grid-template-columns:1fr 90px 130px; gap:8px; padding:8px 0; font-size:13px; border-bottom:1px solid var(--line); align-items:center; }
@@ -724,9 +728,15 @@ width: 28px; height: 24px;}
 
 <div id="zufallView" style="display:none;">
   <div class="zf-toolbar">
-    <button id="zfResetBtn">Animation zurücksetzen</button>
-    <button id="zfRedrawBtn" class="zf-secondary">Nochmal auslosen</button>
+    <button id="zfResetBtn" class="zf-secondary">Animation zurücksetzen</button>
+    <button id="zfStartBtn" class="zf-secondary" disabled>Start</button>
+    <button id="zfDrawBtn" disabled>Auslosen</button>
+    <button id="zfAbsentBtn" class="zf-secondary" disabled title="Zieht neu, ohne dass die eben gezogene Person in der Statistik als gezogen zählt">zählt nicht</button>
     <button id="zfHistoryBtn" class="zf-secondary">Verlauf anzeigen</button>
+    <div class="zf-style-toggle" id="zfStyleToggle">
+      <button data-style="kugel">🎱 Kugeln</button>
+      <button data-style="karten">🃏 Karten</button>
+    </div>
   </div>
   <div class="zf-history-panel" id="zfHistoryPanel"></div>
   <div class="zf-stage">
@@ -3076,6 +3086,24 @@ width: 28px; height: 24px;}
   let zufallLoadedForClassId = null;
   let zfHistoryOpen = false;
 
+  const ZF_STYLE_KEY = "zufallStil";
+  let zfStyle = localStorage.getItem(ZF_STYLE_KEY) === "karten" ? "karten" : "kugel";
+  function zfStyleFile(){ return zfStyle === "karten" ? "./karten.html" : "./zufall.html"; }
+  function applyZfStyleButtons(){
+    document.querySelectorAll("#zfStyleToggle button").forEach(b => b.classList.toggle("active", b.dataset.style === zfStyle));
+  }
+  function setZfStyle(style){
+    if(style === zfStyle) return;
+    zfStyle = style;
+    localStorage.setItem(ZF_STYLE_KEY, zfStyle);
+    applyZfStyleButtons();
+    resetZufallAnimation();
+  }
+  applyZfStyleButtons();
+  document.querySelectorAll("#zfStyleToggle button").forEach(btn => {
+    btn.addEventListener("click", () => setZfStyle(btn.dataset.style));
+  });
+
   // Gewichtet: wer seltener/nie gezogen wurde hat eine höhere Chance
   // (Gewicht = 1 / (Anzahl bisheriger Ziehungen + 1)), aber echter Zufall bleibt erhalten.
   function pickWeightedPupil(){
@@ -3096,13 +3124,17 @@ width: 28px; height: 24px;}
   function recordDraw(pupil){
     const c = activeClass();
     ensureZufallVerlauf(c);
-    c.zufallVerlauf.push({ pupil, at: new Date().toISOString() });
+    const entry = { pupil, at: new Date().toISOString() };
+    c.zufallVerlauf.push(entry);
     saveClasses();
+    return entry;
   }
 
-  function buildZufallUrl(winner){
+  function buildZufallUrl(){
     const names = JSON.stringify(activeClass().pupils);
-    return `./zufall.html?names=${encodeURIComponent(names)}&winner=${encodeURIComponent(winner)}`;
+    // "_" ist ein reiner Cache-Buster, damit ein erneutes Zurücksetzen mit identischer
+    // Schülerliste den Iframe zuverlässig neu lädt (und die Karten/Kugeln neu mischt).
+    return `${zfStyleFile()}?names=${encodeURIComponent(names)}&embedded=1&_=${Date.now()}`;
   }
 
   function renderZufallView(){
@@ -3110,33 +3142,87 @@ width: 28px; height: 24px;}
     if(zfHistoryOpen) renderZufallHistory();
   }
 
+  // Phasenmodell der äußeren Steuerung: "idle" (Iframe lädt noch) -> "ready" (bereit für
+  // Start) -> "collecting" -> "collected" (bereit für Auslosen) -> "drawing" -> "drawn".
+  // Die Schüler-Auswahl selbst passiert ausschließlich beim Wechsel nach "drawing".
+  let zfPhase = "idle";
+  // Verlaufs-Eintrag der zuletzt ausgelosten Person - wird für "Nicht anwesend" benötigt,
+  // um genau diesen einen Eintrag wieder zu entfernen (statt pauschal den letzten im Array).
+  let lastZfEntry = null;
+
+  function setZfButtonsForPhase(){
+    document.getElementById("zfStartBtn").disabled = zfPhase !== "ready";
+    document.getElementById("zfDrawBtn").disabled = !(zfPhase === "collected" || zfPhase === "drawn");
+    document.getElementById("zfAbsentBtn").disabled = !(zfPhase === "drawn" && lastZfEntry);
+  }
+
+  // Lädt die Animation frisch (neu gemischte Anordnung) - bestimmt dabei noch KEINEN
+  // Schüler. Wird für den "Animation zurücksetzen"-Button, beim ersten Öffnen der
+  // Ansicht/Klassenwechsel und beim Umschalten des Animationsstils verwendet.
   function resetZufallAnimation(){
     const c = activeClass();
     if(!c.pupils.length){ showToast("Diese Klasse hat noch keine Schüler."); return; }
-    const winner = pickWeightedPupil();
-    recordDraw(winner);
-    document.getElementById("zufallFrame").src = buildZufallUrl(winner);
+    zfPhase = "idle";
+    lastZfEntry = null;
+    setZfButtonsForPhase();
+    document.getElementById("zufallFrame").src = buildZufallUrl();
     zufallLoadedForClassId = c.id;
     if(zfHistoryOpen) renderZufallHistory();
   }
 
-  function redrawZufall(){
+  // Startet das Einsammeln der Karten / Befüllen der Urne - bestimmt noch keinen Schüler.
+  async function startZufallCollect(){
+    if(zfPhase !== "ready") return;
+    zfPhase = "collecting";
+    setZfButtonsForPhase();
+    const frame = document.getElementById("zufallFrame");
+    try{
+      await frame.contentWindow.startCollect();
+    }catch(e){}
+    zfPhase = "collected";
+    setZfButtonsForPhase();
+  }
+
+  // Bestimmt jetzt erst den gewichteten Zufalls-Schüler, trägt ihn in den Verlauf ein und
+  // startet Mischen + Ziehen (Karte bzw. Kugel) mit genau diesem Namen. Kann beliebig oft
+  // erneut geklickt werden, um neu auszulosen.
+  async function drawZufallWinner(){
+    if(!(zfPhase === "collected" || zfPhase === "drawn")) return;
     const c = activeClass();
     if(!c.pupils.length){ showToast("Diese Klasse hat noch keine Schüler."); return; }
     const winner = pickWeightedPupil();
-    recordDraw(winner);
+    lastZfEntry = recordDraw(winner);
+    zfPhase = "drawing";
+    setZfButtonsForPhase();
     const frame = document.getElementById("zufallFrame");
     try{
-      if(frame.contentWindow && typeof frame.contentWindow.setWinnerAndDraw === "function"){
-        frame.contentWindow.setWinnerAndDraw(winner);
-      } else {
-        frame.src = buildZufallUrl(winner);
-      }
-    }catch(e){
-      frame.src = buildZufallUrl(winner);
-    }
+      await frame.contentWindow.drawWithWinner(winner);
+    }catch(e){}
+    zfPhase = "drawn";
+    setZfButtonsForPhase();
     if(zfHistoryOpen) renderZufallHistory();
   }
+
+  // Für abwesende Schüler: der zuletzt eingetragene Verlaufs-Eintrag wird wieder entfernt
+  // (damit die Ziehungswahrscheinlichkeit dieser Person nicht sinkt, obwohl sie gar nicht
+  // da war) und direkt neu ausgelost.
+  async function redrawAbsentZufall(){
+    if(zfPhase !== "drawn" || !lastZfEntry) return;
+    const c = activeClass();
+    const idx = (c.zufallVerlauf || []).indexOf(lastZfEntry);
+    if(idx !== -1){
+      c.zufallVerlauf.splice(idx, 1);
+      saveClasses();
+    }
+    lastZfEntry = null;
+    setZfButtonsForPhase();
+    await drawZufallWinner();
+  }
+
+  document.getElementById("zufallFrame").addEventListener("load", () => {
+    zfPhase = "ready";
+    setZfButtonsForPhase();
+  });
 
   function renderZufallHistory(){
     const c = activeClass();
@@ -3168,12 +3254,16 @@ width: 28px; height: 24px;}
     if(!confirm("Den kompletten Ziehungs-Verlauf dieser Klasse wirklich löschen? Alle Gewichtungen starten wieder bei null.")) return;
     activeClass().zufallVerlauf = [];
     saveClasses();
+    lastZfEntry = null;
+    setZfButtonsForPhase();
     renderZufallHistory();
     showToast("Verlauf zurückgesetzt.");
   }
 
   document.getElementById("zfResetBtn").addEventListener("click", resetZufallAnimation);
-  document.getElementById("zfRedrawBtn").addEventListener("click", redrawZufall);
+  document.getElementById("zfStartBtn").addEventListener("click", startZufallCollect);
+  document.getElementById("zfDrawBtn").addEventListener("click", drawZufallWinner);
+  document.getElementById("zfAbsentBtn").addEventListener("click", redrawAbsentZufall);
   document.getElementById("zfHistoryBtn").addEventListener("click", () => {
     zfHistoryOpen = !zfHistoryOpen;
     document.getElementById("zfHistoryPanel").classList.toggle("show", zfHistoryOpen);
