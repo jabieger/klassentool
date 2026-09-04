@@ -4,7 +4,7 @@
     {
       "name": "klassentool-dev",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["/private/tmp/claude-502/-Users-bieger-Library-Mobile-Documents-com-apple-CloudDocs-Documents-Coden-Klassentool/8cdc0725-44b1-4042-b40f-8b5e1a6a211c/scratchpad/devserver.js"],
+      "runtimeArgs": ["/Users/bieger/Library/Mobile Documents/com~apple~CloudDocs/Documents/Coden/Klassentool/.claude/devserver.js"],
       "port": 8743,
       "autoPort": true
     }
