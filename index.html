@@ -505,10 +505,30 @@ width: 28px; height: 24px;}
     }
   }
 
-  /* ---- Ansichts-Umschalter (Erfassung / Sitzplan) ---- */
-  .viewtabs{ display:flex; background:var(--stripe); border:1px solid var(--line); border-radius:12px; padding:3px; width:fit-content; }
-  .viewtabs button{ border:none; background:transparent; padding:8px 18px; font-size:13px; font-weight:700; color:var(--muted); border-radius:9px; cursor:pointer; }
-  .viewtabs button.active{ background:var(--ink); color:#fff; }
+  /* ---- Ansichts-Umschalter (Erfassung / Sitzplan / Zufall) ---- */
+  .view-select{
+    border:1px solid var(--line); border-radius:10px; background:var(--surface);
+    padding:8px 10px; font:inherit; font-size:13px; font-weight:700; color:var(--ink); cursor:pointer;
+  }
+
+  /* ---- Zufall-Ansicht ---- */
+  .zf-toolbar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 18px; }
+  .zf-toolbar button{
+    border:none; border-radius:8px; background:var(--ink); color:#fff;
+    height:28px; padding:0 14px; font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+  .zf-toolbar button.zf-secondary{ background:var(--surface); color:var(--ink); border:1.5px solid var(--line); }
+  .zf-history-panel{ display:none; margin:0 18px 12px; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:2px 12px; }
+  .zf-history-panel.show{ display:block; }
+  .zf-history-row{ display:grid; grid-template-columns:1fr 90px 130px; gap:8px; padding:8px 0; font-size:13px; border-bottom:1px solid var(--line); align-items:center; }
+  .zf-history-row:last-of-type{ border-bottom:none; }
+  .zf-history-row.zf-history-head{ font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700; }
+  .zf-reset-history{
+    display:block; width:100%; text-align:left; background:none; border:none; border-top:1px solid var(--line);
+    padding:10px 0 8px; font-size:12.5px; font-weight:700; color:var(--hw); cursor:pointer;
+  }
+  .zf-stage{ padding:0 18px; }
+  .zf-iframe{ width:100%; height:min(70vh, 640px); border:none; border-radius:14px; display:block; background:#15171a; }
 
   /* ---- Sitzplan-Ansicht ---- */
   .sp-app{ display:flex; flex-wrap:wrap; align-items:flex-start; }
@@ -587,10 +607,11 @@ width: 28px; height: 24px;}
       </button>
       <div class="classpicker-menu" id="classpickerMenu"></div>
     </div>
-    <div class="viewtabs" id="viewTabs">
-      <button class="active" data-view="erfassung">📋 Erfassung</button>
-      <button data-view="sitzplan">🪑 Sitzplan</button>
-    </div>
+    <select class="view-select" id="viewSelect">
+      <option value="erfassung">📋 Erfassung</option>
+      <option value="sitzplan">🪑 Sitzplan</option>
+      <option value="zufall">🎲 Zufall</option>
+    </select>
   </div>
   <div class="header-controls">
     <div class="datamode-toggle" id="dataModeToggle">
@@ -698,6 +719,18 @@ width: 28px; height: 24px;}
         <div id="spUnassignedChips" class="sp-unassigned-chips"></div>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="zufallView" style="display:none;">
+  <div class="zf-toolbar">
+    <button id="zfResetBtn">Animation zurücksetzen</button>
+    <button id="zfRedrawBtn" class="zf-secondary">Nochmal auslosen</button>
+    <button id="zfHistoryBtn" class="zf-secondary">Verlauf anzeigen</button>
+  </div>
+  <div class="zf-history-panel" id="zfHistoryPanel"></div>
+  <div class="zf-stage">
+    <iframe id="zufallFrame" class="zf-iframe" title="Zufallsauslosung"></iframe>
   </div>
 </div>
 
@@ -1027,6 +1060,15 @@ width: 28px; height: 24px;}
     });
   }
 
+  // ---- Zufallsauslosung: Ziehungs-Verlauf pro Klasse (unabhängig vom Tagesdatum) ----
+  function ensureZufallVerlauf(c){
+    if(!Array.isArray(c.zufallVerlauf)) c.zufallVerlauf = [];
+  }
+  // Überträgt eine Schüler-Umbenennung in den Ziehungs-Verlauf der Klasse
+  function renamePupilInZufallVerlauf(c, oldName, newName){
+    (c.zufallVerlauf || []).forEach(entry => { if(entry.pupil === oldName) entry.pupil = newName; });
+  }
+
   const loaded = loadClasses();
   let classes = loaded.classes;
   let activeClassId = loaded.activeClassId;
@@ -1034,6 +1076,7 @@ width: 28px; height: 24px;}
   sortClasses();
   classes.forEach(sortPupils);
   classes.forEach(ensureSitzplaene);
+  classes.forEach(ensureZufallVerlauf);
   classes.forEach(ensureChecklisten);
 
   let nextClassNum = classes.reduce((max, c) => {
@@ -1675,6 +1718,7 @@ width: 28px; height: 24px;}
     renderTable();
     spSelection = null;
     if(currentView === "sitzplan") renderSitzplanView();
+    if(currentView === "zufall") renderZufallView();
     if(document.getElementById("settingsOverlay").classList.contains("show")){
       renderClassSettingsList();
       renderPupilSettingsList();
@@ -1769,6 +1813,7 @@ width: 28px; height: 24px;}
     const c = { id, name, pupils: [], data: {} };
     ensureSitzplaene(c);
     ensureChecklisten(c);
+    ensureZufallVerlauf(c);
     classes.push(c);
     sortClasses();
     activateClass(id);
@@ -1842,6 +1887,7 @@ width: 28px; height: 24px;}
         c.pupils[idx] = val;
         renamePupilInSitzplaene(c, oldName, val);
         renamePupilInChecklisten(c, oldName, val);
+        renamePupilInZufallVerlauf(c, oldName, val);
       }
       sortPupils(c);
       saveClasses();
@@ -1989,6 +2035,7 @@ width: 28px; height: 24px;}
         if(!Array.isArray(c.pupils)) c.pupils = [];
         ensureSitzplaene(c);
         ensureChecklisten(c);
+        ensureZufallVerlauf(c);
       });
       sortClasses();
       classes.forEach(sortPupils);
@@ -2124,6 +2171,7 @@ width: 28px; height: 24px;}
       c = { id: "c" + (nextClassNum++), name, pupils: [], data: {} };
       ensureSitzplaene(c);
       ensureChecklisten(c);
+      ensureZufallVerlauf(c);
       classes.push(c);
     }
     return c;
@@ -2319,6 +2367,7 @@ width: 28px; height: 24px;}
     classes = [{ id: "c1", name: "Beispiel-Klasse", pupils: [...DEFAULT_PUPILS], data: {} }];
     ensureSitzplaene(classes[0]);
     ensureChecklisten(classes[0]);
+    ensureZufallVerlauf(classes[0]);
     activeClassId = "c1";
     nextClassNum = 2;
     activateClass(activeClassId);
@@ -2867,15 +2916,13 @@ width: 28px; height: 24px;}
   document.getElementById("spPrintBtn").addEventListener("click", printSitzplan);
   document.getElementById("spUnassignedZone").addEventListener("click", spOnUnassignedZoneClick);
 
-  document.querySelectorAll("#viewTabs button").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll("#viewTabs button").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      currentView = btn.dataset.view;
-      document.getElementById("erfassungView").style.display = currentView === "erfassung" ? "" : "none";
-      document.getElementById("sitzplanView").style.display = currentView === "sitzplan" ? "" : "none";
-      if(currentView === "sitzplan") renderSitzplanView();
-    });
+  document.getElementById("viewSelect").addEventListener("change", (e) => {
+    currentView = e.target.value;
+    document.getElementById("erfassungView").style.display = currentView === "erfassung" ? "" : "none";
+    document.getElementById("sitzplanView").style.display = currentView === "sitzplan" ? "" : "none";
+    document.getElementById("zufallView").style.display = currentView === "zufall" ? "" : "none";
+    if(currentView === "sitzplan") renderSitzplanView();
+    if(currentView === "zufall") renderZufallView();
   });
 
   // ==================================================================
@@ -3022,6 +3069,116 @@ width: 28px; height: 24px;}
     btn.addEventListener("click", () => applyDataMode(btn.dataset.mode));
   });
   document.querySelectorAll("#dataModeToggle button").forEach(b => b.classList.toggle("active", b.dataset.mode === dataMode));
+
+  // ==================================================================
+  // ---- Zufallsauslosung (gewichtet nach Ziehungs-Verlauf der Klasse) ----
+  // ==================================================================
+  let zufallLoadedForClassId = null;
+  let zfHistoryOpen = false;
+
+  // Gewichtet: wer seltener/nie gezogen wurde hat eine höhere Chance
+  // (Gewicht = 1 / (Anzahl bisheriger Ziehungen + 1)), aber echter Zufall bleibt erhalten.
+  function pickWeightedPupil(){
+    const c = activeClass();
+    const counts = {};
+    c.pupils.forEach(p => counts[p] = 0);
+    (c.zufallVerlauf || []).forEach(entry => { if(counts.hasOwnProperty(entry.pupil)) counts[entry.pupil]++; });
+    const weights = c.pupils.map(p => 1 / (counts[p] + 1));
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+    for(let i = 0; i < c.pupils.length; i++){
+      r -= weights[i];
+      if(r <= 0) return c.pupils[i];
+    }
+    return c.pupils[c.pupils.length - 1];
+  }
+
+  function recordDraw(pupil){
+    const c = activeClass();
+    ensureZufallVerlauf(c);
+    c.zufallVerlauf.push({ pupil, at: new Date().toISOString() });
+    saveClasses();
+  }
+
+  function buildZufallUrl(winner){
+    const names = JSON.stringify(activeClass().pupils);
+    return `./zufall.html?names=${encodeURIComponent(names)}&winner=${encodeURIComponent(winner)}`;
+  }
+
+  function renderZufallView(){
+    if(zufallLoadedForClassId !== activeClassId) resetZufallAnimation();
+    if(zfHistoryOpen) renderZufallHistory();
+  }
+
+  function resetZufallAnimation(){
+    const c = activeClass();
+    if(!c.pupils.length){ showToast("Diese Klasse hat noch keine Schüler."); return; }
+    const winner = pickWeightedPupil();
+    recordDraw(winner);
+    document.getElementById("zufallFrame").src = buildZufallUrl(winner);
+    zufallLoadedForClassId = c.id;
+    if(zfHistoryOpen) renderZufallHistory();
+  }
+
+  function redrawZufall(){
+    const c = activeClass();
+    if(!c.pupils.length){ showToast("Diese Klasse hat noch keine Schüler."); return; }
+    const winner = pickWeightedPupil();
+    recordDraw(winner);
+    const frame = document.getElementById("zufallFrame");
+    try{
+      if(frame.contentWindow && typeof frame.contentWindow.setWinnerAndDraw === "function"){
+        frame.contentWindow.setWinnerAndDraw(winner);
+      } else {
+        frame.src = buildZufallUrl(winner);
+      }
+    }catch(e){
+      frame.src = buildZufallUrl(winner);
+    }
+    if(zfHistoryOpen) renderZufallHistory();
+  }
+
+  function renderZufallHistory(){
+    const c = activeClass();
+    const counts = {};
+    const lastAt = {};
+    c.pupils.forEach(p => { counts[p] = 0; lastAt[p] = null; });
+    (c.zufallVerlauf || []).forEach(entry => {
+      if(!counts.hasOwnProperty(entry.pupil)) return;
+      counts[entry.pupil]++;
+      if(!lastAt[entry.pupil] || entry.at > lastAt[entry.pupil]) lastAt[entry.pupil] = entry.at;
+    });
+    const rows = c.pupils.slice().sort((a, b) => counts[b] - counts[a] || a.localeCompare(b, "de"));
+    const panel = document.getElementById("zfHistoryPanel");
+    panel.innerHTML = `
+      <div class="zf-history-row zf-history-head"><span>Schüler</span><span>Anzahl</span><span>Zuletzt</span></div>
+    ` + rows.map(p => `
+      <div class="zf-history-row">
+        <span>${escapeHTML(p)}</span>
+        <span>${counts[p]}</span>
+        <span>${lastAt[p] ? new Date(lastAt[p]).toLocaleDateString("de-DE") : "–"}</span>
+      </div>
+    `).join("") + `
+      <button class="zf-reset-history" id="zfResetHistoryBtn">Verlauf zurücksetzen</button>
+    `;
+    document.getElementById("zfResetHistoryBtn").addEventListener("click", resetZufallHistory);
+  }
+
+  function resetZufallHistory(){
+    if(!confirm("Den kompletten Ziehungs-Verlauf dieser Klasse wirklich löschen? Alle Gewichtungen starten wieder bei null.")) return;
+    activeClass().zufallVerlauf = [];
+    saveClasses();
+    renderZufallHistory();
+    showToast("Verlauf zurückgesetzt.");
+  }
+
+  document.getElementById("zfResetBtn").addEventListener("click", resetZufallAnimation);
+  document.getElementById("zfRedrawBtn").addEventListener("click", redrawZufall);
+  document.getElementById("zfHistoryBtn").addEventListener("click", () => {
+    zfHistoryOpen = !zfHistoryOpen;
+    document.getElementById("zfHistoryPanel").classList.toggle("show", zfHistoryOpen);
+    if(zfHistoryOpen) renderZufallHistory();
+  });
 
   classpickerLabel.textContent = activeClass().name;
   applyDate(todayISO());

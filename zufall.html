@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Kugelziehung</title>
+<style>
+  :root{
+    --bg: #15171a;
+    --line: rgba(255,255,255,0.22);
+    --ball-1: #e7e3da;
+    --ball-2: #c9c2b3;
+    --ball-3: #a89f8c;
+    --accent: #cf9d4f;
+    --text: #eceae6;
+    --muted: #82868a;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text);
+  }
+
+  .stage {
+    width: min(94vw, 760px);
+    text-align: center;
+  }
+
+  .layout {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 48px;
+  }
+
+  .urn-column {
+    flex: 0 0 auto;
+  }
+
+  /* ---------- Intro: Kugeln mit Namen neben der Urne ---------- */
+  .intro-grid {
+    flex: 0 0 auto;
+    width: 210px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px 6px;
+    transition: opacity 0.3s ease;
+  }
+
+  .intro-grid.spent {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .intro-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .intro-ball {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+  }
+
+  .intro-name {
+    font-size: 0.62rem;
+    color: var(--muted);
+    white-space: nowrap;
+    transition: opacity 0.35s ease;
+  }
+
+  .intro-name.hidden {
+    opacity: 0;
+  }
+
+  .flying-ball {
+    position: fixed;
+    border-radius: 50%;
+    z-index: 50;
+    pointer-events: none;
+  }
+
+  /* ---------- Urne: reine Linienzeichnung ---------- */
+  .urn-wrap {
+    position: relative;
+    width: 240px;
+    height: 240px;
+    margin: 0 auto 36px;
+  }
+
+  .urn {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1.5px solid var(--line);
+  }
+
+  .lid-orbit {
+    position: absolute;
+    inset: 0;
+  }
+
+  .lid-orbit.spinning {
+    animation: lid-spin-settle 8s linear forwards;
+  }
+
+  @keyframes lid-spin-settle {
+    0%   { transform: rotate(0deg); animation-timing-function: linear; }
+    50%  { transform: rotate(1440deg); animation-timing-function: ease-out; }
+    100% { transform: rotate(2280deg); }
+  }
+
+  .lid {
+    position: absolute;
+    top: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 52px;
+    height: 15px;
+  }
+
+  .flap {
+    position: absolute;
+    inset: 0;
+    transform-origin: 0% 50%;
+    transition: transform 0.55s ease;
+  }
+
+  .lid.open .flap {
+    transform: rotate(-90deg);
+  }
+
+  .lid .bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--line);
+  }
+
+  .lid .knob {
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--line);
+  }
+
+  .ball-slot {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    transform: translate(-50%, -50%);
+  }
+
+  .ball-visual {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--c, var(--ball-1));
+  }
+
+  .ball-visual.idle { animation: jiggle-idle var(--dur, 2.4s) ease-in-out infinite; animation-delay: var(--delay, 0s); }
+  .ball-visual.mixing { animation: jiggle-mix 8s linear forwards; animation-delay: 0s; }
+  .ball-visual.hidden { opacity: 0; }
+
+  @keyframes jiggle-idle {
+    0%   { transform: translate(0,0); }
+    25%  { transform: translate(1.5px,-1px); }
+    50%  { transform: translate(-1px,1.5px); }
+    75%  { transform: translate(-1.5px,-1px); }
+    100% { transform: translate(0,0); }
+  }
+
+  @keyframes jiggle-mix {
+    0%   { transform: translate(0,0) rotate(0deg); }
+    5%   { transform: translate(var(--m1x),var(--m1y)) rotate(var(--m1r)); }
+    9%   { transform: translate(var(--m2x),var(--m2y)) rotate(var(--m2r)); }
+    14%  { transform: translate(var(--m3x),var(--m3y)) rotate(var(--m3r)); }
+    19%  { transform: translate(var(--m4x),var(--m4y)) rotate(var(--m4r)); }
+    23%  { transform: translate(var(--m5x),var(--m5y)) rotate(var(--m5r)); }
+    28%  { transform: translate(var(--m6x),var(--m6y)) rotate(var(--m6r)); }
+    33%  { transform: translate(var(--m7x),var(--m7y)) rotate(var(--m7r)); }
+    38%  { transform: translate(var(--m8x),var(--m8y)) rotate(var(--m8r)); }
+    42%  { transform: translate(var(--m9x),var(--m9y)) rotate(var(--m9r)); }
+    47%  { transform: translate(var(--m10x),var(--m10y)) rotate(var(--m10r)); }
+    52%  { transform: translate(var(--m11x),var(--m11y)) rotate(var(--m11r)); }
+    56%  { transform: translate(var(--m12x),var(--m12y)) rotate(var(--m12r)); }
+    61%  { transform: translate(var(--m13x),var(--m13y)) rotate(var(--m13r)); }
+    66%  { transform: translate(var(--m14x),var(--m14y)) rotate(var(--m14r)); }
+    70%  { transform: translate(var(--m15x),var(--m15y)) rotate(var(--m15r)); }
+    75%  { transform: translate(var(--m16x),var(--m16y)) rotate(var(--m16r)); animation-timing-function: ease-out; }
+    83%  { transform: translate(var(--m17x),var(--m17y)) rotate(var(--m17r)); }
+    89%  { transform: translate(var(--m18x),var(--m18y)) rotate(var(--m18r)); }
+    94%  { transform: translate(var(--m19x),var(--m19y)) rotate(var(--m19r)); }
+    97%  { transform: translate(var(--m20x),var(--m20y)) rotate(var(--m20r)); }
+    100% { transform: translate(0,0) rotate(0deg); }
+  }
+
+  .ball-visual.bounce {
+    animation: ball-bounce 2.6s ease-out forwards;
+  }
+
+  @keyframes ball-bounce {
+    0%   { transform: translate(var(--p0x), var(--p0y)); animation-timing-function: ease-in; }
+    35%  { transform: translate(var(--p1x), var(--p1y)); animation-timing-function: ease-out; }
+    50%  { transform: translate(var(--p2x), var(--p2y)); animation-timing-function: ease-in; }
+    65%  { transform: translate(var(--p3x), var(--p3y)); animation-timing-function: ease-out; }
+    78%  { transform: translate(var(--p4x), var(--p4y)); animation-timing-function: ease-in; }
+    90%  { transform: translate(var(--p5x), var(--p5y)); }
+    100% { transform: translate(0, 0); }
+  }
+
+  /* ---------- Kapsel-Öffnung (Ergebnis) ---------- */
+  .capsule {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+  }
+
+  .capsule.show { opacity: 1; }
+
+  .half {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 50%;
+    background: var(--c, var(--ball-1));
+    transition: transform 0.7s cubic-bezier(.3,.8,.3,1);
+  }
+
+  .half.top { top: 0; border-radius: 20px 20px 0 0; }
+  .half.bottom { bottom: 0; border-radius: 0 0 20px 20px; }
+
+  .capsule.open .half.top { transform: translateY(-28px); }
+  .capsule.open .half.bottom { transform: translateY(28px); }
+
+  .name {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0.85);
+    font-size: 1.5rem;
+    color: var(--accent);
+    opacity: 0;
+    transition: opacity 0.5s ease 0.35s, transform 0.5s ease 0.35s;
+    white-space: nowrap;
+  }
+
+  .capsule.open .name {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  /* ---------- Steuerung ---------- */
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 0.9rem;
+    letter-spacing: 0.03em;
+    padding: 10px 22px;
+    border-radius: 2px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+
+  button:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .status {
+    margin-top: 18px;
+    min-height: 20px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ball-visual.idle, .ball-visual.mixing { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="layout">
+    <div class="urn-column">
+      <div class="urn-wrap">
+        <div class="urn"></div>
+        <div class="lid-orbit" id="lidOrbit">
+          <div class="lid">
+            <div class="flap">
+              <div class="bar"></div>
+              <div class="knob"></div>
+            </div>
+          </div>
+        </div>
+        <div id="ballsLayer"></div>
+        <div class="capsule" id="capsule">
+          <div class="half top"></div>
+          <div class="half bottom"></div>
+          <div class="name" id="nameText"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="fillBtn">Urne befüllen</button>
+        <button id="drawBtn" disabled>Kugel ziehen</button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="intro-grid" id="introGrid"></div>
+  </div>
+</div>
+
+<script>
+  const layer = document.getElementById('ballsLayer');
+  const urnEl = document.getElementById('lidOrbit');
+  const lidEl = document.querySelector('.lid');
+  const capsule = document.getElementById('capsule');
+  const nameText = document.getElementById('nameText');
+  const drawBtn = document.getElementById('drawBtn');
+  const fillBtn = document.getElementById('fillBtn');
+  const statusEl = document.getElementById('status');
+
+  const introGrid = document.getElementById('introGrid');
+
+  const DEFAULT_NAMES = ['Anna','Lukas','Mia','Paul','Emma','Ben','Lea','Finn','Nora','Jonas',
+                 'Clara','Felix','Lina','Theo','Ida','Marie','Elias','Sophie','Noah','Lotte',
+                 'Anton','Frieda','Jakob','Greta','Oskar','Mila','Leon','Emil','Luisa','Matteo'];
+
+  // ---- Vom Klassentool übergebene Werte: Schülerliste + vorbestimmter Gewinner.
+  // Ohne Parameter (z. B. beim direkten Öffnen der Datei) läuft die Animation
+  // eigenständig mit den Beispielnamen weiter.
+  const urlParams = new URLSearchParams(location.search);
+  let NAMES = DEFAULT_NAMES;
+  try{
+    const namesParam = urlParams.get('names');
+    if(namesParam){
+      const parsed = JSON.parse(namesParam);
+      if(Array.isArray(parsed) && parsed.length) NAMES = parsed;
+    }
+  }catch(e){}
+  let currentWinner = urlParams.get('winner') || null;
+
+  function shuffled(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  const tones = ['var(--ball-1)','var(--ball-2)','var(--ball-3)'];
+
+  const URN_R = 120;  // Radius der Urne
+  const BALL_R = 9;   // Radius einer Kugel
+
+  let slots = [];
+
+  function heapPositions(n) {
+    // Kugeln liegen als Haufen am Boden der Urne, in Reihen von unten nach oben.
+    // Reihen-Kapazität reicht bis zu ~41 Kugeln (mehr als eine reguläre Klassengröße).
+    const rows = [8, 8, 7, 6, 5, 3, 2, 2];
+    const rowGap = BALL_R * 1.6;
+    const positions = [];
+    let bottomY = URN_R - BALL_R - 6;
+    let idx = 0;
+    for (let r = 0; r < rows.length && idx < n; r++) {
+      const count = Math.min(rows[r], n - idx);
+      const y = bottomY - r * rowGap;
+      const xLimit = Math.sqrt(Math.max(0, URN_R * URN_R - y * y)) - BALL_R;
+      const span = xLimit * 0.9;
+      for (let i = 0; i < count; i++) {
+        const t = count === 1 ? 0 : (i / (count - 1)) * 2 - 1; // -1..1
+        const jitterX = (Math.random() - 0.5) * 4;
+        const jitterY = (Math.random() - 0.5) * 3;
+        positions.push({
+          x: URN_R + t * span + jitterX,
+          y: URN_R + y + jitterY
+        });
+        idx++;
+      }
+    }
+    return positions;
+  }
+
+  function rnd(min, max) {
+    return Math.random() * (max - min) + min;
+  }
+
+  function setMixPath(visual, base) {
+    // Erste Phase: 16 schnelle Richtungswechsel mit kräftigem, fast ungedämpftem Ausschlag.
+    // Zweite Phase: 4 Punkte mit abklingendem Ausschlag (Bremsphase), analog zum Deckel.
+    const scales = [
+      1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+      1.0, 1.0, 1.0, 0.98, 0.98, 0.95, 0.95, 0.9,
+      0.6, 0.35, 0.15, 0.05
+    ];
+    const maxR = URN_R - BALL_R - 2;
+    for (let k = 1; k <= 20; k++) {
+      const scale = scales[k - 1];
+      let dx = rnd(-42, 42) * scale;
+      let dy = rnd(-42, 42) * scale;
+
+      const tx = base.x + dx;
+      const ty = base.y + dy;
+      const vx = tx - URN_R;
+      const vy = ty - URN_R;
+      const dist = Math.hypot(vx, vy);
+
+      if (dist > maxR) {
+        const clampScale = maxR / dist;
+        dx = (URN_R + vx * clampScale) - base.x;
+        dy = (URN_R + vy * clampScale) - base.y;
+      }
+
+      visual.style.setProperty(`--m${k}x`, dx.toFixed(1) + 'px');
+      visual.style.setProperty(`--m${k}y`, dy.toFixed(1) + 'px');
+      visual.style.setProperty(`--m${k}r`, (rnd(-55, 55) * scale).toFixed(1) + 'deg');
+    }
+  }
+
+  function createBalls(hidden) {
+    layer.innerHTML = '';
+    slots = [];
+    const positions = heapPositions(NAMES.length);
+    const names = shuffled(NAMES);
+
+    positions.forEach((pos, i) => {
+      const slot = document.createElement('div');
+      slot.className = 'ball-slot';
+      slot.style.left = pos.x + 'px';
+      slot.style.top = pos.y + 'px';
+
+      const visual = document.createElement('div');
+      visual.className = hidden ? 'ball-visual idle hidden' : 'ball-visual idle';
+      visual.style.setProperty('--c', tones[i % tones.length]);
+      visual.style.setProperty('--dur', (2 + Math.random() * 1.2).toFixed(2) + 's');
+      visual.style.setProperty('--delay', (Math.random() * 1.5).toFixed(2) + 's');
+      setMixPath(visual, pos);
+
+      slot.appendChild(visual);
+      layer.appendChild(slot);
+      slots.push({ slot, visual, tone: tones[i % tones.length], name: names[i] });
+    });
+  }
+
+  let introBalls = [];
+
+  function setupIntro() {
+    // Kugeln schon jetzt an ihrer finalen Position im Haufen erzeugen, aber unsichtbar -
+    // das sind die "echten" Kugeln, in die die Grid-Kugeln später hineinfliegen.
+    createBalls(true);
+
+    // Grid mit Kugel + Name für jede Kugel, bleibt stehen bis "Urne befüllen" geklickt wird
+    introGrid.innerHTML = '';
+    introGrid.classList.remove('spent');
+    introBalls = slots.map(({ tone, name }) => {
+      const item = document.createElement('div');
+      item.className = 'intro-item';
+
+      const ball = document.createElement('div');
+      ball.className = 'intro-ball';
+      ball.style.background = tone;
+      ball.style.visibility = 'visible';
+
+      const label = document.createElement('div');
+      label.className = 'intro-name';
+      label.classList.remove('hidden');
+      label.textContent = name;
+
+      item.appendChild(ball);
+      item.appendChild(label);
+      introGrid.appendChild(item);
+      return { ball, label };
+    });
+  }
+
+  function bezierPoint(a, b, c, t) {
+    const mt = 1 - t;
+    return {
+      x: mt * mt * a.x + 2 * mt * t * b.x + t * t * c.x,
+      y: mt * mt * a.y + 2 * mt * t * b.y + t * t * c.y
+    };
+  }
+
+  function easeInOutQuad(t) {
+    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  }
+
+  // Bewegt ein Element auf einer stark parabelförmigen Flugbahn von p0 über den
+  // Punkt "through" (die Urnenöffnung) nach p2. Zwei aneinandergesetzte, an "through"
+  // gespiegelte Bezierkurven sorgen für einen kräftigen, glatten Bogen ohne Knick.
+  function flyArc(el, p0, p2, through, duration) {
+    return new Promise(resolve => {
+      const dist1 = Math.hypot(through.x - p0.x, through.y - p0.y);
+      const lift = Math.max(70, dist1 * 0.65);
+      const midA = { x: (p0.x + through.x) / 2, y: (p0.y + through.y) / 2 };
+      const controlA = { x: midA.x, y: midA.y - lift };
+      const controlB = { x: 2 * through.x - controlA.x, y: 2 * through.y - controlA.y };
+
+      const start = performance.now();
+      const half = duration / 2;
+
+      function step(now) {
+        const elapsed = now - start;
+        let p;
+        if (elapsed < half) {
+          const t = easeInOutQuad(Math.min(1, elapsed / half));
+          p = bezierPoint(p0, controlA, through, t);
+        } else {
+          const t = easeInOutQuad(Math.min(1, (elapsed - half) / half));
+          p = bezierPoint(through, controlB, p2, t);
+        }
+        el.style.left = p.x + 'px';
+        el.style.top = p.y + 'px';
+        if (elapsed < duration) {
+          requestAnimationFrame(step);
+        } else {
+          resolve();
+        }
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  async function fillUrn() {
+    fillBtn.disabled = true;
+
+    // Namen verschwinden, Deckel öffnet sich
+    introBalls.forEach(({ label }) => label.classList.add('hidden'));
+    lidEl.classList.add('open');
+
+    await wait(550);
+
+    // Kugeln fliegen vom Grid in einem Bogen durch die Öffnung (oben, wo der Deckel sitzt)
+    // in die Urne, zu ihrer Haufen-Position.
+    const urnRect = document.querySelector('.urn-wrap').getBoundingClientRect();
+    const flightDuration = 780;
+    const stagger = 14;
+
+    const flights = slots.map((s, i) => {
+      const sourceRect = introBalls[i].ball.getBoundingClientRect();
+      const targetRect = s.visual.getBoundingClientRect();
+      const w = sourceRect.width;
+      const h = sourceRect.height;
+
+      const p0 = { x: sourceRect.left, y: sourceRect.top };
+      const p2 = {
+        x: targetRect.left + targetRect.width / 2 - w / 2,
+        y: targetRect.top + targetRect.height / 2 - h / 2
+      };
+      const through = {
+        x: urnRect.left + URN_R - w / 2 + (Math.random() - 0.5) * 10,
+        y: urnRect.top + 4 - h / 2
+      };
+
+      const clone = document.createElement('div');
+      clone.className = 'flying-ball';
+      clone.style.width = w + 'px';
+      clone.style.height = h + 'px';
+      clone.style.left = p0.x + 'px';
+      clone.style.top = p0.y + 'px';
+      clone.style.background = s.tone;
+      document.body.appendChild(clone);
+
+      introBalls[i].ball.style.visibility = 'hidden';
+
+      return new Promise(resolve => {
+        setTimeout(async () => {
+          await flyArc(clone, p0, p2, through, flightDuration);
+          s.visual.classList.remove('hidden');
+          clone.remove();
+          resolve();
+        }, i * stagger);
+      });
+    });
+
+    await Promise.all(flights);
+
+    lidEl.classList.remove('open');
+    introGrid.classList.add('spent');
+
+    await wait(300);
+    drawBtn.disabled = false;
+  }
+
+  function resetCapsule() {
+    capsule.classList.remove('show', 'open');
+    nameText.textContent = '';
+  }
+
+  function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function draw() {
+    drawBtn.disabled = true;
+    statusEl.textContent = 'Die Kugeln mischen sich …';
+    resetCapsule();
+    lidEl.classList.remove('open');
+
+    slots.forEach(({ visual }) => {
+      visual.classList.remove('idle');
+      visual.classList.add('mixing');
+    });
+
+    // Deckel-Rotation neu starten (falls schon einmal gelaufen)
+    urnEl.classList.remove('spinning');
+    void urnEl.offsetWidth;
+    urnEl.classList.add('spinning');
+
+    await wait(8000);
+    await wait(1000);
+
+    // Deckel klappt auf, bevor die Kugel herausfliegt
+    lidEl.classList.add('open');
+    await wait(550);
+
+    // Öffnungsposition am Innenrand der Urne (bei 120°, dort wo der Deckel stehen bleibt)
+    const angleRad = (120 * Math.PI) / 180;
+    const dirX = Math.sin(angleRad);
+    const dirY = -Math.cos(angleRad);
+    const openX = URN_R + dirX * (URN_R - BALL_R);
+    const openY = URN_R + dirY * (URN_R - BALL_R);
+
+    // Die Kugel, die der Öffnung am nächsten liegt, fällt heraus
+    let winnerIndex = 0;
+    let bestDist = Infinity;
+    slots.forEach((s, i) => {
+      const x = parseFloat(s.slot.style.left);
+      const y = parseFloat(s.slot.style.top);
+      const d = Math.hypot(x - openX, y - openY);
+      if (d < bestDist) {
+        bestDist = d;
+        winnerIndex = i;
+      }
+    });
+    const winner = slots[winnerIndex];
+
+    slots.forEach(({ visual }, i) => {
+      if (i !== winnerIndex) {
+        visual.classList.remove('mixing');
+        visual.classList.add('idle');
+      }
+    });
+    winner.visual.classList.remove('mixing');
+
+    // Landepunkt: draußen vor der Öffnung, deutlich weiter rechts unten am "Boden"
+    const exitDist = URN_R + 130;
+    const exitX = URN_R + dirX * exitDist + 40;
+    const exitY = URN_R + dirY * exitDist;
+
+    // Ausgangsposition der Kugel relativ zum Landepunkt, damit sie sichtbar von dort losfällt
+    const startX = parseFloat(winner.slot.style.left);
+    const startY = parseFloat(winner.slot.style.top);
+    const startDX = startX - exitX;
+    const startDY = startY - exitY;
+
+    winner.slot.style.left = exitX + 'px';
+    winner.slot.style.top = exitY + 'px';
+
+    winner.visual.style.setProperty('--p0x', startDX.toFixed(1) + 'px');
+    winner.visual.style.setProperty('--p0y', startDY.toFixed(1) + 'px');
+    winner.visual.style.setProperty('--p1x', (startDX * 0.55).toFixed(1) + 'px');
+    winner.visual.style.setProperty('--p1y', '0px');
+    winner.visual.style.setProperty('--p2x', (startDX * 0.40).toFixed(1) + 'px');
+    winner.visual.style.setProperty('--p2y', '-18px');
+    winner.visual.style.setProperty('--p3x', (startDX * 0.25).toFixed(1) + 'px');
+    winner.visual.style.setProperty('--p3y', '0px');
+    winner.visual.style.setProperty('--p4x', (startDX * 0.17).toFixed(1) + 'px');
+    winner.visual.style.setProperty('--p4y', '-8px');
+    winner.visual.style.setProperty('--p5x', (startDX * 0.09).toFixed(1) + 'px');
+    winner.visual.style.setProperty('--p5y', '0px');
+
+    winner.visual.classList.add('bounce');
+
+    await wait(2600);
+
+    winner.visual.classList.add('hidden');
+    capsule.style.left = exitX + 'px';
+    capsule.style.top = exitY + 'px';
+    capsule.querySelectorAll('.half').forEach(h => h.style.setProperty('--c', winner.tone));
+    capsule.classList.add('show');
+
+    await wait(150);
+
+    // Angezeigt wird der vom Klassentool vorbestimmte Gewinner-Name (falls übergeben) -
+    // welche Kugel optisch herausfällt ist rein dekorativ und ohne Bezug dazu.
+    const name = currentWinner || NAMES[Math.floor(Math.random() * NAMES.length)];
+    nameText.textContent = name;
+    capsule.classList.add('open');
+
+    statusEl.textContent = name;
+
+    await wait(300);
+    drawBtn.disabled = false;
+  }
+
+  async function performDraw() {
+    if (capsule.classList.contains('open')) {
+      resetCapsule();
+      createBalls(false);
+      statusEl.textContent = '';
+      await wait(50);
+    }
+    draw();
+  }
+
+  drawBtn.addEventListener('click', performDraw);
+  fillBtn.addEventListener('click', fillUrn);
+
+  // ---- Vom Klassentool aus dem umgebenden Fenster aufrufbar (selber Origin):
+  // zieht mit neuem, vorbestimmtem Namen erneut, ohne die Urne zu leeren.
+  window.setWinnerAndDraw = function(name){
+    if (drawBtn.disabled) return; // Urne noch nicht befüllt
+    currentWinner = name;
+    performDraw();
+  };
+
+  setupIntro();
+</script>
+
+</body>
+</html>
