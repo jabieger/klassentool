@@ -3273,6 +3273,23 @@ width: 28px; height: 24px;}
   classpickerLabel.textContent = activeClass().name;
   applyDate(todayISO());
 
+  // ---- Automatischer Datumswechsel, wenn das Tool über Mitternacht hinaus geöffnet bleibt ----
+  let trackedToday = todayISO();
+  function checkDateRollover(){
+    const now = todayISO();
+    if(now === trackedToday) return;
+    const wasOnToday = (selectedDate === trackedToday);
+    trackedToday = now;
+    if(wasOnToday) applyDate(now);
+    else todayBtn.disabled = (selectedDate === now);
+  }
+  document.addEventListener("visibilitychange", () => {
+    if(document.visibilityState === "visible") checkDateRollover();
+  });
+  window.addEventListener("focus", checkDateRollover);
+  window.addEventListener("pageshow", checkDateRollover);
+  setInterval(checkDateRollover, 60000);
+
   // ---- PWA: Service Worker registrieren (Offline-Nutzung, Home-Bildschirm) ----
   if("serviceWorker" in navigator){
     window.addEventListener("load", () => {
