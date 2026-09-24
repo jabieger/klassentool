@@ -126,6 +126,8 @@
     background:var(--ink); color:#fff; cursor:pointer; flex-shrink:0;
   }
   .addrow button:disabled{ opacity:.4; cursor:default; }
+  .addrow-wrap{ flex-wrap:wrap; }
+  .addrow-wrap input{ min-width:110px; }
 
   .emptylist{ font-size:12.5px; color:var(--muted); font-style:italic; padding:4px 2px 8px; }
 
@@ -795,9 +797,10 @@ width: 28px; height: 24px;}
       <div class="settings-section">
         <h3>Schüler in <span id="pupilSectionClass"></span></h3>
         <div id="pupilList"></div>
-        <div class="addrow">
-          <input type="text" id="newPupilInput" placeholder="Name, z. B. Mika L.">
-          <button id="addPupilBtn">Hinzufügen</button>
+        <div class="addrow addrow-wrap">
+          <input type="text" id="newPupilVornameInput" placeholder="Vorname">
+          <input type="text" id="newPupilNachnameInput" placeholder="Nachname, z. B. L.">
+          <button id="addPupilBtn" style="flex:1 1 100%;">Hinzufügen</button>
         </div>
         <div class="addrow" style="margin-top:8px;">
           <button id="importPupilsCsvBtn" class="today-btn" style="padding:9px 14px;">CSV importieren</button>
@@ -1009,12 +1012,45 @@ width: 28px; height: 24px;}
   function getClass(id){ return classes.find(c => c.id === id); }
   function activeClass(){ return getClass(activeClassId); }
   function sortClasses(){ classes.sort((a,b) => a.name.localeCompare(b.name, "de")); }
-  // Sortiert Schüler nach dem letzten Wort im Namen (Nachname bei "Vorname Nachname").
-  function lastNameKey(name){
-    const parts = name.trim().split(/\s+/);
-    return parts[parts.length - 1] || name;
+
+  // ---- Vor-/Nachname eines Schülers ----
+  // Gespeichert wird weiterhin ein einzelner String (unverändert als Schlüssel in Sitzplan,
+  // Checklisten, Zufallsverlauf & Tagesdaten nutzbar), aber im eindeutigen Format
+  // "Nachname, Vorname". Alte Einträge ohne Komma (vor dieser Umstellung angelegt) fallen auf
+  // die bisherige Heuristik zurück (letztes Wort = Nachname), bis sie einmal umbenannt werden.
+  function splitPupilName(name){
+    const raw = (name || "").trim();
+    const commaIdx = raw.indexOf(",");
+    if(commaIdx !== -1){
+      return { nachname: raw.slice(0, commaIdx).trim(), vorname: raw.slice(commaIdx + 1).trim() };
+    }
+    const parts = raw.split(/\s+/);
+    if(parts.length < 2) return { nachname: raw, vorname: "" };
+    return { nachname: parts[parts.length - 1], vorname: parts.slice(0, -1).join(" ") };
   }
-  function sortPupils(c){ c.pupils.sort((a,b) => lastNameKey(a).localeCompare(lastNameKey(b), "de")); }
+  function joinPupilName(vorname, nachname){
+    vorname = (vorname || "").trim();
+    nachname = (nachname || "").trim();
+    if(!vorname) return nachname;
+    if(!nachname) return vorname;
+    return `${nachname}, ${vorname}`;
+  }
+  function pupilLastNameKey(name){ return splitPupilName(name).nachname || name; }
+  function pupilNameCompare(a, b){ return pupilLastNameKey(a).localeCompare(pupilLastNameKey(b), "de"); }
+  // Name in natürlicher Lesereihenfolge ("Vorname Nachname"), unabhängig vom Speicherformat.
+  function pupilNaturalName(name){
+    const { vorname, nachname } = splitPupilName(name);
+    return vorname && nachname ? `${vorname} ${nachname}` : (name || "");
+  }
+  function pupilFirstName(name){ return splitPupilName(name).vorname || name; }
+  // HTML-Darstellung mit fett gedrucktem Vornamen, für Stellen die per innerHTML rendern.
+  function pupilNameHTML(name){
+    const { vorname, nachname } = splitPupilName(name);
+    if(vorname && nachname) return `<strong>${escapeHTML(vorname)}</strong> ${escapeHTML(nachname)}`;
+    return escapeHTML(name || "");
+  }
+
+  function sortPupils(c){ c.pupils.sort(pupilNameCompare); }
 
   // ---- Sitzplan: Datenmodell pro Klasse (mehrere Pläne möglich, Schülerliste kommt aus c.pupils) ----
   function makeDefaultSitzplan(name){
@@ -1311,7 +1347,7 @@ width: 28px; height: 24px;}
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td class="namecell" data-p="${p}" style="cursor:pointer;"><span class="num">${String(i+1).padStart(2,"0")}</span>${p}</td>
+        <td class="namecell" data-p="${p}" style="cursor:pointer;"><span class="num">${String(i+1).padStart(2,"0")}</span>${pupilNameHTML(p)}</td>
         <td class="dotcell"><span class="dot ${hwOn?'on':''}" data-action="hw" data-p="${p}">HA</span>
         </td>
         <td class="matcell">
@@ -1417,7 +1453,7 @@ width: 28px; height: 24px;}
     const panel = document.getElementById("ovCatPanel");
     panel.innerHTML = "";
 
-    let sortedPupils = filterPupil ? [filterPupil] : [...pupils].sort((a,b) => a.localeCompare(b, "de"));
+    let sortedPupils = filterPupil ? [filterPupil] : [...pupils].sort(pupilNameCompare);
     const withAny = sortedPupils.filter(p => {
       const e = perPupil[p];
       return e.hw.length || e.mat.length || e.sonst.length || e.muendl.length;
@@ -1450,7 +1486,7 @@ width: 28px; height: 24px;}
         lines = `<div class="ov-emptynote">Nur mündliche Bewertungen – siehe Ansicht „Mündlich"</div>`;
       }
 
-      block.innerHTML = `<div class="ov-pname">${p}</div>${lines}`;
+      block.innerHTML = `<div class="ov-pname">${pupilNameHTML(p)}</div>${lines}`;
       panel.appendChild(block);
     });
   }
@@ -1462,7 +1498,7 @@ width: 28px; height: 24px;}
 
     const basePupils = filterPupil ? [filterPupil] : pupils;
     const rows = basePupils.filter(p => perPupil[p].muendl.length > 0)
-                            .sort((a,b) => a.localeCompare(b, "de"));
+                            .sort(pupilNameCompare);
 
     if(rows.length === 0){
       panel.innerHTML = `<p style="color:var(--muted); font-size:14px;">Noch keine mündlichen Bewertungen vorhanden.</p>`;
@@ -1483,7 +1519,7 @@ width: 28px; height: 24px;}
       const values = perPupil[p].muendl.map(m => m.value);
       const avg = values.reduce((a,b)=>a+b,0) / values.length;
 
-      let tds = `<td class="ov-namecell">${p}</td><td class="ov-avgcell">${avg.toFixed(1)}</td>`;
+      let tds = `<td class="ov-namecell">${pupilNameHTML(p)}</td><td class="ov-avgcell">${avg.toFixed(1)}</td>`;
       dates.forEach(d => {
         if(entries.hasOwnProperty(d)){
           const v = entries[d];
@@ -1510,7 +1546,7 @@ width: 28px; height: 24px;}
 
   function openOverview(filterPupil){
     currentOverviewPupil = filterPupil || null;
-    document.getElementById("overviewTitle").textContent = filterPupil ? `Übersicht — ${filterPupil}` : "Übersicht";
+    document.getElementById("overviewTitle").innerHTML = filterPupil ? `Übersicht — ${pupilNameHTML(filterPupil)}` : "Übersicht";
     document.querySelectorAll("#ovToggle button").forEach(b => b.classList.remove("active"));
     document.querySelector("#ovToggle button[data-view='cat']").classList.add("active");
     document.getElementById("ovCatPanel").style.display = "block";
@@ -1560,7 +1596,7 @@ width: 28px; height: 24px;}
     document.getElementById("printArea").innerHTML = `
       <div class="print-page">
         <div class="print-head">
-          <div class="pname">${escapeHTML(pupil)}</div>
+          <div class="pname">${pupilNameHTML(pupil)}</div>
           <div class="pdate">Stand: ${today}</div>
         </div>
         <div class="print-sub">${escapeHTML(cls ? cls.name : "")} · Übersicht</div>
@@ -1849,7 +1885,7 @@ width: 28px; height: 24px;}
 
       const label = document.createElement("span");
       label.className = "rowlabel";
-      label.textContent = p;
+      label.innerHTML = pupilNameHTML(p);
       label.title = "Antippen zum Umbenennen";
       label.addEventListener("click", () => startRenamePupil(row, c, idx));
       row.appendChild(label);
@@ -1866,7 +1902,7 @@ width: 28px; height: 24px;}
       delBtn.textContent = "×";
       delBtn.title = "Schüler entfernen";
       delBtn.addEventListener("click", () => {
-        if(!confirm(`„${p}" wirklich aus der Klasse entfernen?`)) return;
+        if(!confirm(`„${pupilNaturalName(p)}" wirklich aus der Klasse entfernen?`)) return;
         c.pupils.splice(idx, 1);
         syncSitzplaeneWithPupils(c);
         syncChecklistenWithPupils(c);
@@ -1882,16 +1918,30 @@ width: 28px; height: 24px;}
   function startRenamePupil(row, c, idx){
     if(row.querySelector("input")) return;
     const label = row.querySelector(".rowlabel");
-    const input = document.createElement("input");
-    input.type = "text";
-    input.className = "editfield";
-    input.value = c.pupils[idx];
-    label.replaceWith(input);
-    input.focus();
-    input.select();
+    const { vorname, nachname } = splitPupilName(c.pupils[idx]);
 
+    const vornameInput = document.createElement("input");
+    vornameInput.type = "text";
+    vornameInput.className = "editfield";
+    vornameInput.placeholder = "Vorname";
+    vornameInput.value = vorname;
+
+    const nachnameInput = document.createElement("input");
+    nachnameInput.type = "text";
+    nachnameInput.className = "editfield";
+    nachnameInput.placeholder = "Nachname";
+    nachnameInput.value = nachname;
+
+    label.replaceWith(vornameInput);
+    vornameInput.after(nachnameInput);
+    vornameInput.focus();
+    vornameInput.select();
+
+    let committed = false;
     const commit = () => {
-      const val = input.value.trim();
+      if(committed) return;
+      committed = true;
+      const val = joinPupilName(vornameInput.value, nachnameInput.value);
       const oldName = c.pupils[idx];
       if(val && val !== oldName){
         c.pupils[idx] = val;
@@ -1903,8 +1953,15 @@ width: 28px; height: 24px;}
       saveClasses();
       refreshChrome();
     };
-    input.addEventListener("keydown", (e) => { if(e.key === "Enter") input.blur(); });
-    input.addEventListener("blur", commit);
+    const commitIfLeavingRow = () => {
+      setTimeout(() => {
+        if(document.activeElement !== vornameInput && document.activeElement !== nachnameInput) commit();
+      }, 0);
+    };
+    vornameInput.addEventListener("keydown", (e) => { if(e.key === "Enter") nachnameInput.focus(); });
+    nachnameInput.addEventListener("keydown", (e) => { if(e.key === "Enter") nachnameInput.blur(); });
+    vornameInput.addEventListener("blur", commitIfLeavingRow);
+    nachnameInput.addEventListener("blur", commitIfLeavingRow);
   }
 
   // ---- CSV-Export (alle Klassen, lange Liste: eine Zeile pro Eintrag) ----
@@ -2294,7 +2351,10 @@ width: 28px; height: 24px;}
   });
 
   document.getElementById("addPupilBtn").addEventListener("click", addPupil);
-  document.getElementById("newPupilInput").addEventListener("keydown", (e) => { if(e.key === "Enter") addPupil(); });
+  document.getElementById("newPupilVornameInput").addEventListener("keydown", (e) => {
+    if(e.key === "Enter") document.getElementById("newPupilNachnameInput").focus();
+  });
+  document.getElementById("newPupilNachnameInput").addEventListener("keydown", (e) => { if(e.key === "Enter") addPupil(); });
 
   // ---- Schüler-Import per CSV (Spalten: Vorname; Nachname) ----
   const PUPIL_CSV_EXPECTED_HEADER = ["vorname", "nachname"];
@@ -2311,7 +2371,7 @@ width: 28px; height: 24px;}
     rows.slice(1).forEach(r => {
       const vorname = (r[0] || "").trim();
       const nachname = (r[1] || "").trim();
-      const name = [vorname, nachname].filter(Boolean).join(" ");
+      const name = joinPupilName(vorname, nachname);
       if(!name){ skipped++; return; }
       names.push(name);
     });
@@ -2398,13 +2458,16 @@ width: 28px; height: 24px;}
     document.querySelector("#settingsTabs button[data-tab='general']").click();
     showToast("Alle Daten wurden gelöscht. Der Ausgangszustand wurde wiederhergestellt.");
   });  function addPupil(){
-    const input = document.getElementById("newPupilInput");
-    const name = input.value.trim();
+    const vornameInput = document.getElementById("newPupilVornameInput");
+    const nachnameInput = document.getElementById("newPupilNachnameInput");
+    const name = joinPupilName(vornameInput.value, nachnameInput.value);
     if(!name) return;
     activeClass().pupils.push(name);
     sortPupils(activeClass());
     saveClasses();
-    input.value = "";
+    vornameInput.value = "";
+    nachnameInput.value = "";
+    vornameInput.focus();
     refreshChrome();
   }
 
@@ -2612,7 +2675,7 @@ width: 28px; height: 24px;}
   }
 
   // Im Sitzplan wird nur der Vorname angezeigt (Zuordnung/Markierung speichern weiterhin den vollen Namen)
-  function spFirstName(fullName){ return (fullName || "").trim().split(/\s+/)[0] || fullName; }
+  function spFirstName(fullName){ return pupilFirstName(fullName); }
 
   function spSeatIndex(row, col, seatsPerRow){ return row * seatsPerRow + col; }
   function spSeatActive(plan, idx){ return !plan.disabled.includes(idx); }
@@ -2844,7 +2907,7 @@ width: 28px; height: 24px;}
         seatEl.className = "sp-seat" + (!active ? " disabled" : occupant ? " filled" : "") + (flagged ? " flagged" : "");
         if(spSelection && spSelection.type === "seat" && spSelection.idx === idx) seatEl.classList.add("selected");
         seatEl.textContent = !active ? "" : (occupant ? spFirstName(occupant) : "·");
-        if(occupant) seatEl.title = occupant;
+        if(occupant) seatEl.title = pupilNaturalName(occupant);
         seatEl.addEventListener("click", () => spOnSeatClick(idx));
         rowEl.appendChild(seatEl);
       }
@@ -2859,7 +2922,7 @@ width: 28px; height: 24px;}
         + (spSelection && spSelection.type === "student" && spSelection.name === name ? " selected" : "")
         + (plan.highlighted.includes(name) ? " flagged" : "");
       chip.textContent = spFirstName(name);
-      chip.title = name;
+      chip.title = pupilNaturalName(name);
       chip.addEventListener("click", (e) => { e.stopPropagation(); spOnChipClick(name); });
       unassignedEl.appendChild(chip);
     });
@@ -3234,13 +3297,13 @@ width: 28px; height: 24px;}
       counts[entry.pupil]++;
       if(!lastAt[entry.pupil] || entry.at > lastAt[entry.pupil]) lastAt[entry.pupil] = entry.at;
     });
-    const rows = c.pupils.slice().sort((a, b) => counts[b] - counts[a] || a.localeCompare(b, "de"));
+    const rows = c.pupils.slice().sort((a, b) => counts[b] - counts[a] || pupilNameCompare(a, b));
     const panel = document.getElementById("zfHistoryPanel");
     panel.innerHTML = `
       <div class="zf-history-row zf-history-head"><span>Schüler</span><span>Anzahl</span><span>Zuletzt</span></div>
     ` + rows.map(p => `
       <div class="zf-history-row">
-        <span>${escapeHTML(p)}</span>
+        <span>${pupilNameHTML(p)}</span>
         <span>${counts[p]}</span>
         <span>${lastAt[p] ? new Date(lastAt[p]).toLocaleDateString("de-DE") : "–"}</span>
       </div>

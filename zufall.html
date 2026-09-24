@@ -382,7 +382,22 @@
   let currentWinner = urlParams.get('winner') || null;
 
   // Im Kapsel-Text erscheint nur der Vorname, der volle Name bleibt im Status darunter sichtbar.
-  function firstName(n){ return (n || "").trim().split(/\s+/)[0] || n; }
+  // Namen können im Klassentool als "Nachname, Vorname" gespeichert sein; ohne Komma greift
+  // die alte Heuristik (erstes Wort = Vorname) für Altbestände.
+  function firstName(n){
+    const raw = (n || "").trim();
+    const commaIdx = raw.indexOf(",");
+    if(commaIdx !== -1) return raw.slice(commaIdx + 1).trim() || n;
+    return raw.split(/\s+/)[0] || n;
+  }
+  function naturalName(n){
+    const raw = (n || "").trim();
+    const commaIdx = raw.indexOf(",");
+    if(commaIdx === -1) return n;
+    const nachname = raw.slice(0, commaIdx).trim();
+    const vorname = raw.slice(commaIdx + 1).trim();
+    return vorname && nachname ? `${vorname} ${nachname}` : n;
+  }
 
   function shuffled(arr) {
     const a = arr.slice();
@@ -735,7 +750,7 @@
     nameText.textContent = firstName(name);
     capsule.classList.add('open');
 
-    statusEl.textContent = name;
+    statusEl.textContent = naturalName(name);
 
     await wait(300);
     drawBtn.disabled = false;
