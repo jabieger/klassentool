@@ -126,6 +126,8 @@
     background:var(--ink); color:#fff; cursor:pointer; flex-shrink:0;
   }
   .addrow button:disabled{ opacity:.4; cursor:default; }
+  .pn-first{ font-weight:800; }
+  .pn-last{ font-weight:400; font-size:.88em; opacity:.75; }
   .addrow-wrap{ flex-wrap:wrap; }
   .addrow-wrap input{ min-width:110px; }
 
@@ -1043,10 +1045,10 @@ width: 28px; height: 24px;}
     return vorname && nachname ? `${vorname} ${nachname}` : (name || "");
   }
   function pupilFirstName(name){ return splitPupilName(name).vorname || name; }
-  // HTML-Darstellung mit fett gedrucktem Vornamen, für Stellen die per innerHTML rendern.
+  // HTML-Darstellung mit kräftigem Vornamen und kleinerem, dünnerem Nachnamen, für Stellen die per innerHTML rendern.
   function pupilNameHTML(name){
     const { vorname, nachname } = splitPupilName(name);
-    if(vorname && nachname) return `<strong>${escapeHTML(vorname)}</strong> ${escapeHTML(nachname)}`;
+    if(vorname && nachname) return `<span class="pn-first">${escapeHTML(vorname)}</span> <span class="pn-last">${escapeHTML(nachname)}</span>`;
     return escapeHTML(name || "");
   }
 
