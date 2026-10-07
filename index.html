@@ -1477,11 +1477,11 @@ width: 28px; height: 24px;}
         lines += `<div class="ov-catline"><span class="ov-catlabel hw">HA</span><span class="ov-catvalue">${vals}</span></div>`;
       }
       if(e.mat.length){
-        const vals = e.mat.map(m => `<span class="ov-datechip ${isEntryDone('mat', m.date, p)?'done':''}" data-cat="mat" data-date="${m.date}" data-p="${escapeHTML(p)}">${chipDate(m.date)} ${(matByKey[m.key]&&matByKey[m.key].label) || m.key} </span>`).join(" ");
+        const vals = e.mat.map(m => `<span class="ov-entry"><span class="ov-datechip ${isEntryDone('mat', m.date, p)?'done':''}" data-cat="mat" data-date="${m.date}" data-p="${escapeHTML(p)}">${chipDate(m.date)}</span><span class="ov-entrytext">${(matByKey[m.key]&&matByKey[m.key].label) || m.key}</span></span>`).join(" ");
         lines += `<div class="ov-catline"><span class="ov-catlabel mat">Material</span><span class="ov-catvalue">${vals}</span></div>`;
       }
       if(e.sonst.length){
-        const vals = e.sonst.map(s => `<span class="ov-datechip ${isEntryDone('sonst', s.date, p)?'done':''}" data-cat="sonst" data-date="${s.date}" data-p="${escapeHTML(p)}">${chipDate(s.date)} ${escapeHTML(s.note)} </span>`).join(" ");
+        const vals = e.sonst.map(s => `<span class="ov-entry"><span class="ov-datechip ${isEntryDone('sonst', s.date, p)?'done':''}" data-cat="sonst" data-date="${s.date}" data-p="${escapeHTML(p)}">${chipDate(s.date)}</span><span class="ov-entrytext">${escapeHTML(s.note)}</span></span>`).join(" ");
         lines += `<div class="ov-catline"><span class="ov-catlabel sonst">Sonstiges</span><span class="ov-catvalue">${vals}</span></div>`;
       }
       if(!e.hw.length && !e.mat.length && !e.sonst.length){
