@@ -354,7 +354,7 @@ width: 28px; height: 24px;}
   .ov-catlabel.hw{ color:var(--hw); }
   .ov-catlabel.mat{ color:var(--mat); }
   .ov-catlabel.sonst{ color:var(--sonst); }
-  .ov-catvalue{ color:var(--ink); }
+  .ov-catvalue{ color:var(--ink); display:flex; flex-wrap:wrap; align-items:center; gap:5px 0; }
   .ov-datechip{
     display: inline-block;
     background: #616161;
@@ -370,6 +370,8 @@ width: 28px; height: 24px;}
     transition: background .1s ease, color .1s ease;
     border: 1px solid #616161;
    }
+  .ov-entry{ display:inline-block; margin-right:10px; }
+  .ov-entrytext{ margin-left:4px; }
  .ov-datechip:hover{ /*filter:brightness(0.95);*/ }
   .ov-datechip.done{
     background: white;
@@ -479,7 +481,8 @@ width: 28px; height: 24px;}
     background:#ffffff; border-radius:4px; padding:2px 7px; font-size:9.5pt; font-weight:600;
   }
   .print-chip.done{ border-style:dashed; }
-  .print-chip .note{ font-weight:400; }
+  .print-entry{ display:inline-flex; align-items:center; gap:5px; margin-right:6px; }
+  .print-entry .note{ font-size:9.5pt; }
   .print-empty{ font-size:9.5pt; color:#8B8A80; font-style:italic; }
   .print-legend{
     display:flex; align-items:center; gap:14px; margin:18px 0 4px; padding-top:12px;
@@ -1577,7 +1580,8 @@ width: 28px; height: 24px;}
         const date = withNote ? item.date : item;
         const note = withNote ? (item.note || (matByKey[item.key] && matByKey[item.key].label) || item.key || "") : "";
         const done = isEntryDone(cat, date, pupil);
-        return `<span class="print-chip ${done?'done':''}">${chipDate(date)}${note ? ` <span class="note">${escapeHTML(note)}</span>` : ""}</span>`;
+        const chip = `<span class="print-chip ${done?'done':''}">${chipDate(date)}</span>`;
+        return note ? `<span class="print-entry">${chip}<span class="note">${escapeHTML(note)}</span></span>` : chip;
       }).join("");
       return chips;
     }
