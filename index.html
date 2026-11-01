@@ -496,6 +496,8 @@ width: 28px; height: 24px;}
   }
 
   @media print{
+    html, body{ background:#fff !important; }
+    footer{ display:none !important; }
     body *{ visibility:hidden; }
     #printArea, #printArea *{ visibility:visible; }
     #printArea{ display:block; position:absolute; top:0; left:0; width:100%; }
@@ -510,6 +512,7 @@ width: 28px; height: 24px;}
       flex:1; width:auto; border-width:2px; border-color:#1B1C19;
       background:#fff !important; color:#1B1C19 !important;
     }
+    #printArea .sp-print-grid .sp-seat.disabled{ border:1px dashed #aaa; }
   }
 
   /* ---- Ansichts-Umschalter (Erfassung / Sitzplan / Zufall) ---- */
