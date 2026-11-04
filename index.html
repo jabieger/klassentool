@@ -1601,7 +1601,7 @@ width: 28px; height: 24px;}
         lines += `<div class="ov-catline"><span class="ov-catlabel mat">Material</span><span class="ov-catvalue">${vals}</span></div>`;
       }
       if(e.arb.length){
-        const vals = e.arb.map(a => { const o = arbByKey[a.key]; return `<span class="ov-entry"><span class="ov-datechip ${isEntryDone('arb', a.date, p)?'done':''}" data-cat="arb" data-date="${a.date}" data-p="${escapeHTML(p)}">${chipDate(a.date)}</span><span class="ov-entrytext">${o ? o.icon + " " + o.label : a.key}</span></span>`; }).join(" ");
+        const vals = e.arb.map(a => { const o = arbByKey[a.key]; return `<span class="ov-entry"><span class="ov-datechip ${isEntryDone('arb', a.date, p)?'done':''}" data-cat="arb" data-date="${a.date}" data-p="${escapeHTML(p)}">${chipDate(a.date)}</span><span class="ov-entrytext">${o ? o.label : a.key}</span></span>`; }).join(" ");
         lines += `<div class="ov-catline"><span class="ov-catlabel arb">Arbeitsverh.</span><span class="ov-catvalue">${vals}</span></div>`;
       }
       if(e.sonst.length){
@@ -1699,7 +1699,7 @@ width: 28px; height: 24px;}
       if(!list.length) return "";
       const chips = list.map(item => {
         const date = withNote ? item.date : item;
-        const note = withNote ? (item.note || (matByKey[item.key] && matByKey[item.key].label) || (arbByKey[item.key] && (arbByKey[item.key].icon + " " + arbByKey[item.key].label)) || item.key || "") : "";
+        const note = withNote ? (item.note || (matByKey[item.key] && matByKey[item.key].label) || (arbByKey[item.key] && arbByKey[item.key].label) || item.key || "") : "";
         const done = isEntryDone(cat, date, pupil);
         const chip = `<span class="print-chip ${done?'done':''}">${chipDate(date)}</span>`;
         return note ? `<span class="print-entry">${chip}<span class="note">${escapeHTML(note)}</span></span>` : chip;
