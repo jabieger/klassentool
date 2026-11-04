@@ -21,6 +21,7 @@
     --accent:#2454C7;
     --hw:#B5502A;
     --mat:#3E6E52;
+    --arb:#7A5C99;
     --sonst:#3B5C86;
     --radius:10px;
   }
@@ -241,6 +242,10 @@ width: 28px; height: 24px;}
   .matlabel{ font-size:12px; font-weight:700; color:var(--mat); white-space:nowrap; margin-left: 6px;     height: 28px;
     align-content: center;}
 
+  .arbcell{ text-align:center; padding:8px 1rem; width:120px; }
+  .arbinner{ display:flex; align-items:center; justify-content:center; cursor:pointer; height:28px; }
+  .arbicon{ font-size:18px; line-height:1; }
+
   .sonstcell{ padding:8px 1rem; width:190px; position: relative; }
   .noteinput{
     width:100%; border:none; background:transparent; font:inherit; font-size:12.5px;
@@ -334,6 +339,7 @@ width: 28px; height: 24px;}
     color:var(--ink); cursor:pointer;
   }
   .popover .optbtn.selected{ border-color:var(--mat); background:#E4EFEC; color:var(--mat); }
+  .popover .optbtn.arb.selected{ border-color:var(--arb); background:#EEE8F4; color:var(--arb); }
   .popover .optbtn .oicon{ font-size:16px; }
   .popover .closebtn{
     width:100%; background:transparent; color:var(--muted); border:none;
@@ -350,9 +356,10 @@ width: 28px; height: 24px;}
   .ov-pupilblock .ov-pname{ font-weight:700; font-size:15px; margin-bottom:16px; }
   .ov-catline{ display:flex; gap:8px; font-size:13.5px; line-height:1.8; margin-bottom:16px; }
   .ov-catline:last-child{ margin-bottom:0; }
-  .ov-catlabel{ flex-shrink:0; font-weight:700; width:82px; align-content: center;}
+  .ov-catlabel{ flex-shrink:0; font-weight:700; width:92px; align-content: center;}
   .ov-catlabel.hw{ color:var(--hw); }
   .ov-catlabel.mat{ color:var(--mat); }
+  .ov-catlabel.arb{ color:var(--arb); }
   .ov-catlabel.sonst{ color:var(--sonst); }
   .ov-catvalue{ color:var(--ink); display:flex; flex-wrap:wrap; align-items:center; gap:5px 0; }
   .ov-datechip{
@@ -662,6 +669,7 @@ width: 28px; height: 24px;}
         <th class="namehead">Schüler</th>
         <th><span class="icon">📕</span>HA</th>
         <th><span class="icon">🎒</span>Material</th>
+        <th><span class="icon">🧭</span>Arbeitsverh.</th>
         <th><span class="icon">💬</span>Sonstiges</th>
       </tr>
     </thead>
@@ -765,6 +773,10 @@ width: 28px; height: 24px;}
   <div class="popover" id="matPopover"></div>
 </div>
 
+<div class="overlay" id="arbOverlay">
+  <div class="popover" id="arbPopover"></div>
+</div>
+
 <div class="overlay" id="importOverlay">
   <div class="popover" id="importPopover">
     <h3>CSV importieren</h3>
@@ -826,6 +838,17 @@ width: 28px; height: 24px;}
           <input type="text" id="newMatSuggestionInput" placeholder="z. B. Taschenrechner">
           <button id="addMatSuggestionBtn">Hinzufügen</button>
         </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Auswahl für „Arbeitsverhalten"</h3>
+        <div id="arbOptionList"></div>
+        <div class="addrow">
+          <input type="text" id="newArbIconInput" placeholder="🙂" maxlength="8" style="flex:0 0 52px; width:52px; min-width:0; text-align:center;">
+          <input type="text" id="newArbLabelInput" placeholder="z. B. Störung des Unterrichts">
+          <button id="addArbOptionBtn">Hinzufügen</button>
+        </div>
+        <p style="font-size:11.5px; color:var(--muted); margin:6px 2px 0;">In der Erfassung wird nur das Symbol angezeigt.</p>
       </div>
 
       <div class="settings-section">
@@ -985,7 +1008,42 @@ width: 28px; height: 24px;}
     return ` (${shortDate(date)})`;
   }
 
-  function emptyDay(){ return { hw:[], mat:{}, sonst:{}, muendl:{} }; }
+  // Arbeitsverhalten: in der Spalte wird nur das Symbol angezeigt, Auswahl ist in den Einstellungen anpassbar
+  const DEFAULT_ARB_OPTIONS = [
+    { key:"beginn", label:"Arbeitsbeginn stark verzögert", icon:"⏱️" },
+    { key:"uebung", label:"Übungsaufgabe gar nicht oder nur teilweise bearbeitet", icon:"📝" }
+  ];
+  const ARB_OPTIONS_KEY = "klassentool_arb_optionen_v1";
+  function loadArbOptions(){
+    try{
+      const raw = localStorage.getItem(ARB_OPTIONS_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        if(Array.isArray(parsed)) return parsed;
+      }
+    }catch(e){}
+    return DEFAULT_ARB_OPTIONS.map(o => ({...o}));
+  }
+  function saveArbOptions(){
+    try{ localStorage.setItem(ARB_OPTIONS_KEY, JSON.stringify(arbOptions)); }
+    catch(e){}
+  }
+  const arbByKey = {};
+  function rebuildArbByKey(){
+    Object.keys(arbByKey).forEach(k => delete arbByKey[k]);
+    arbOptions.forEach(o => arbByKey[o.key] = o);
+  }
+  function uniqueArbKey(base){
+    const existing = new Set(arbOptions.map(o => o.key));
+    let key = slugify(base);
+    let i = 2;
+    while(existing.has(key)){ key = slugify(base) + "-" + i; i++; }
+    return key;
+  }
+  let arbOptions = loadArbOptions();
+  rebuildArbByKey();
+
+  function emptyDay(){ return { hw:[], mat:{}, arb:{}, sonst:{}, muendl:{} }; }
 
   function loadClasses(){
     try{
@@ -1141,11 +1199,13 @@ width: 28px; height: 24px;}
   function ensureDay(date){
     if(!data[date]) data[date] = emptyDay();
     if(!data[date].mat) data[date].mat = {};
+    if(!data[date].arb) data[date].arb = {};
     if(!data[date].sonst) data[date].sonst = {};
     if(!data[date].muendl) data[date].muendl = {};
     if(!data[date].done) data[date].done = {};
     if(!data[date].done.hw) data[date].done.hw = [];
     if(!data[date].done.mat) data[date].done.mat = [];
+    if(!data[date].done.arb) data[date].done.arb = [];
     if(!data[date].done.sonst) data[date].done.sonst = [];
   }
 
@@ -1259,6 +1319,49 @@ width: 28px; height: 24px;}
     if(e.target.id === "matOverlay") document.getElementById("matOverlay").classList.remove("show");
   });
 
+  function openArbPopover(p){
+    const date = currentDate();
+    ensureDay(date);
+    const current = data[date].arb[p] || null;
+    const pop = document.getElementById("arbPopover");
+    pop.innerHTML = `
+      <h3>Arbeitsverhalten — ${pupilNameHTML(p)}</h3>
+      ${arbOptions.length ? "" : `<div class="emptylist">Keine Auswahl angelegt – in den Einstellungen unter „Vorschläge“ hinzufügen.</div>`}
+      ${arbOptions.map(o => `
+        <button class="optbtn arb ${current===o.key?'selected':''}" data-key="${o.key}">
+          <span class="oicon">${o.icon}</span>${o.label}
+        </button>
+      `).join("")}
+      <button class="closebtn" id="arbClose">Schließen</button>
+    `;
+    pop.querySelectorAll(".optbtn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.key;
+        const prev = data[date].arb[p] || null;
+        if(prev === key){
+          delete data[date].arb[p];
+          saveData(); renderTable();
+        } else {
+          data[date].arb[p] = key;
+          saveData(); renderTable();
+          showToast(`Arbeitsverhalten ${arbByKey[key].icon} für ${p} eingetragen${dateSuffix(date)}`, () => {
+            if(prev === null) delete data[date].arb[p];
+            else data[date].arb[p] = prev;
+            saveData(); renderTable();
+          });
+        }
+        document.getElementById("arbOverlay").classList.remove("show");
+      });
+    });
+    document.getElementById("arbClose").addEventListener("click", () => {
+      document.getElementById("arbOverlay").classList.remove("show");
+    });
+    document.getElementById("arbOverlay").classList.add("show");
+  }
+  document.getElementById("arbOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "arbOverlay") document.getElementById("arbOverlay").classList.remove("show");
+  });
+
   function updateNote(p, value, inputEl){
     const date = currentDate();
     ensureDay(date);
@@ -1318,7 +1421,7 @@ width: 28px; height: 24px;}
     fillerTh.className = "dyn-th";
     theadRow.appendChild(fillerTh);
 
-    let colsHTML = `<col style="width:250px"><col style="width:78px"><col style="width:100px"><col style="width:190px">`;
+    let colsHTML = `<col style="width:250px"><col style="width:78px"><col style="width:100px"><col style="width:120px"><col style="width:190px">`;
     if(dataMode === "muendl"){
       colsHTML += `<col style="width:200px">`;
     } else {
@@ -1331,6 +1434,8 @@ width: 28px; height: 24px;}
       const hwOn = day.hw.includes(p);
       const matKey = day.mat[p];
       const matOpt = matKey ? matByKey[matKey] : null;
+      const arbKey = (day.arb || {})[p];
+      const arbOpt = arbKey ? (arbByKey[arbKey] || { icon:"❔", label:arbKey }) : null;
       const note = day.sonst[p] || "";
       const muendlVal = day.muendl.hasOwnProperty(p) ? day.muendl[p] : null;
 
@@ -1361,6 +1466,11 @@ width: 28px; height: 24px;}
         <td class="matcell">
           <div class="matinner" data-action="mat" data-p="${p}">
             ${matOpt ? `<span class="matlabel">${matOpt.icon} ${matOpt.label}</span>` : `<span class="dot_mat">+</span>`}
+          </div>
+        </td>
+        <td class="arbcell">
+          <div class="arbinner" data-action="arb" data-p="${p}" ${arbOpt ? `title="${arbOpt.label}"` : ""}>
+            ${arbOpt ? `<span class="arbicon">${arbOpt.icon}</span>` : `<span class="dot_mat">+</span>`}
           </div>
         </td>
 
@@ -1394,6 +1504,9 @@ width: 28px; height: 24px;}
     });
     tbody.querySelectorAll("[data-action='mat']").forEach(el => {
       el.addEventListener("click", () => openMatPopover(el.dataset.p));
+    });
+    tbody.querySelectorAll("[data-action='arb']").forEach(el => {
+      el.addEventListener("click", () => openArbPopover(el.dataset.p));
     });
 
 
@@ -1445,11 +1558,12 @@ width: 28px; height: 24px;}
 
   function buildPerPupil(){
     const per = {};
-    pupils.forEach(p => per[p] = { hw:[], mat:[], sonst:[], muendl:[] });
+    pupils.forEach(p => per[p] = { hw:[], mat:[], arb:[], sonst:[], muendl:[] });
     Object.keys(data).sort().forEach(date => {
       const day = data[date];
       (day.hw||[]).forEach(p => per[p] && per[p].hw.push(date));
       Object.keys(day.mat||{}).forEach(p => per[p] && per[p].mat.push({ date, key: day.mat[p] }));
+      Object.keys(day.arb||{}).forEach(p => per[p] && per[p].arb.push({ date, key: day.arb[p] }));
       Object.keys(day.sonst||{}).forEach(p => per[p] && per[p].sonst.push({ date, note: day.sonst[p] }));
       Object.keys(day.muendl||{}).forEach(p => per[p] && per[p].muendl.push({ date, value: day.muendl[p] }));
     });
@@ -1464,7 +1578,7 @@ width: 28px; height: 24px;}
     let sortedPupils = filterPupil ? [filterPupil] : [...pupils].sort(pupilNameCompare);
     const withAny = sortedPupils.filter(p => {
       const e = perPupil[p];
-      return e.hw.length || e.mat.length || e.sonst.length || e.muendl.length;
+      return e.hw.length || e.mat.length || e.arb.length || e.sonst.length || e.muendl.length;
     });
 
     if(withAny.length === 0){
@@ -1486,11 +1600,15 @@ width: 28px; height: 24px;}
         const vals = e.mat.map(m => `<span class="ov-entry"><span class="ov-datechip ${isEntryDone('mat', m.date, p)?'done':''}" data-cat="mat" data-date="${m.date}" data-p="${escapeHTML(p)}">${chipDate(m.date)}</span><span class="ov-entrytext">${(matByKey[m.key]&&matByKey[m.key].label) || m.key}</span></span>`).join(" ");
         lines += `<div class="ov-catline"><span class="ov-catlabel mat">Material</span><span class="ov-catvalue">${vals}</span></div>`;
       }
+      if(e.arb.length){
+        const vals = e.arb.map(a => { const o = arbByKey[a.key]; return `<span class="ov-entry"><span class="ov-datechip ${isEntryDone('arb', a.date, p)?'done':''}" data-cat="arb" data-date="${a.date}" data-p="${escapeHTML(p)}">${chipDate(a.date)}</span><span class="ov-entrytext">${o ? o.icon + " " + o.label : a.key}</span></span>`; }).join(" ");
+        lines += `<div class="ov-catline"><span class="ov-catlabel arb">Arbeitsverh.</span><span class="ov-catvalue">${vals}</span></div>`;
+      }
       if(e.sonst.length){
         const vals = e.sonst.map(s => `<span class="ov-entry"><span class="ov-datechip ${isEntryDone('sonst', s.date, p)?'done':''}" data-cat="sonst" data-date="${s.date}" data-p="${escapeHTML(p)}">${chipDate(s.date)}</span><span class="ov-entrytext">${escapeHTML(s.note)}</span></span>`).join(" ");
         lines += `<div class="ov-catline"><span class="ov-catlabel sonst">Sonstiges</span><span class="ov-catvalue">${vals}</span></div>`;
       }
-      if(!e.hw.length && !e.mat.length && !e.sonst.length){
+      if(!e.hw.length && !e.mat.length && !e.arb.length && !e.sonst.length){
         lines = `<div class="ov-emptynote">Nur mündliche Bewertungen – siehe Ansicht „Mündlich"</div>`;
       }
 
@@ -1581,7 +1699,7 @@ width: 28px; height: 24px;}
       if(!list.length) return "";
       const chips = list.map(item => {
         const date = withNote ? item.date : item;
-        const note = withNote ? (item.note || (matByKey[item.key] && matByKey[item.key].label) || item.key || "") : "";
+        const note = withNote ? (item.note || (matByKey[item.key] && matByKey[item.key].label) || (arbByKey[item.key] && (arbByKey[item.key].icon + " " + arbByKey[item.key].label)) || item.key || "") : "";
         const done = isEntryDone(cat, date, pupil);
         const chip = `<span class="print-chip ${done?'done':''}">${chipDate(date)}</span>`;
         return note ? `<span class="print-entry">${chip}<span class="note">${escapeHTML(note)}</span></span>` : chip;
@@ -1591,11 +1709,13 @@ width: 28px; height: 24px;}
 
     const hwChips = chipsFor("hw", e.hw, false);
     const matChips = chipsFor("mat", e.mat, true);
+    const arbChips = chipsFor("arb", e.arb, true);
     const sonstChips = chipsFor("sonst", e.sonst, true);
 
     let rows = "";
     if(hwChips) rows += `<div class="print-catrow"><span class="print-catlabel" style="color:#B5502A;">Hausaufg.</span>${hwChips}</div>`;
     if(matChips) rows += `<div class="print-catrow"><span class="print-catlabel" style="color:#3E6E52;">Material</span>${matChips}</div>`;
+    if(arbChips) rows += `<div class="print-catrow"><span class="print-catlabel" style="color:#7A5C99;">Arbeitsverh.</span>${arbChips}</div>`;
     if(sonstChips) rows += `<div class="print-catrow"><span class="print-catlabel" style="color:#3B5C86;">Sonstiges</span>${sonstChips}</div>`;
     if(!rows) rows = `<p class="print-empty">Noch keine Einträge vorhanden.</p>`;
 
@@ -2003,6 +2123,12 @@ width: 28px; height: 24px;}
           rows.push([c.name, date, p, "Material vergessen", label, dayDoneFor(day, "mat", p) ? "Ja" : "Nein"]);
         });
 
+        Object.keys(day.arb || {}).forEach(p => {
+          const key = day.arb[p];
+          const label = (arbByKey[key] && arbByKey[key].label) || key;
+          rows.push([c.name, date, p, "Arbeitsverhalten", label, dayDoneFor(day, "arb", p) ? "Ja" : "Nein"]);
+        });
+
         Object.keys(day.sonst || {}).forEach(p => {
           const note = day.sonst[p];
           if(!note || !note.trim()) return;
@@ -2060,6 +2186,7 @@ width: 28px; height: 24px;}
       classes,
       activeClassId,
       matOptions,
+      arbOptions,
       sonstVorschlaege
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -2130,6 +2257,12 @@ width: 28px; height: 24px;}
         rebuildMatByKey();
         saveMatOptions();
       }
+      if(Array.isArray(parsed.arbOptions)){
+        arbOptions.length = 0;
+        parsed.arbOptions.forEach(o => arbOptions.push(o));
+        rebuildArbByKey();
+        saveArbOptions();
+      }
       if(Array.isArray(parsed.sonstVorschlaege)){
         sonstVorschlaege.length = 0;
         parsed.sonstVorschlaege.forEach(s => sonstVorschlaege.push(s));
@@ -2143,6 +2276,7 @@ width: 28px; height: 24px;}
       renderClassSettingsList();
       renderPupilSettingsList();
       renderMatSuggestionsList();
+      renderArbOptionsList();
       renderSuggestionsList();
       showToast("Komplettsicherung importiert.");
     };
@@ -2184,7 +2318,7 @@ width: 28px; height: 24px;}
     return null;
   }
 
-  function freshImportDay(){ return { hw:[], mat:{}, sonst:{}, muendl:{}, done:{ hw:[], mat:[], sonst:[] } }; }
+  function freshImportDay(){ return { hw:[], mat:{}, arb:{}, sonst:{}, muendl:{}, done:{ hw:[], mat:[], arb:[], sonst:[] } }; }
 
   function buildImportedByClass(rows){
     const byClass = {};
@@ -2211,6 +2345,11 @@ width: 28px; height: 24px;}
         day.mat[schueler] = opt ? opt.key : wert;
         if(erledigt && !day.done.mat.includes(schueler)) day.done.mat.push(schueler);
         importedCount++;
+      } else if(kategorie === "Arbeitsverhalten"){
+        const opt = arbOptions.find(o => o.label === wert);
+        day.arb[schueler] = opt ? opt.key : wert;
+        if(erledigt && !day.done.arb.includes(schueler)) day.done.arb.push(schueler);
+        importedCount++;
       } else if(kategorie === "Sonstiges"){
         day.sonst[schueler] = wert;
         if(erledigt && !day.done.sonst.includes(schueler)) day.done.sonst.push(schueler);
@@ -2232,6 +2371,7 @@ width: 28px; height: 24px;}
     return new Set([
       ...(day.hw || []),
       ...Object.keys(day.mat || {}),
+      ...Object.keys(day.arb || {}),
       ...Object.keys(day.sonst || {}),
       ...Object.keys(day.muendl || {})
     ]);
@@ -2272,13 +2412,16 @@ width: 28px; height: 24px;}
           const importedDay = byClass[className][date];
           if(!c.data[date]) c.data[date] = freshImportDay();
           const day = c.data[date];
-          if(!day.done) day.done = { hw:[], mat:[], sonst:[] };
+          if(!day.done) day.done = { hw:[], mat:[], arb:[], sonst:[] };
+          if(!day.arb) day.arb = {};
+          if(!day.done.arb) day.done.arb = [];
 
           importedDay.hw.forEach(p => { if(!day.hw.includes(p)) day.hw.push(p); });
           Object.assign(day.mat, importedDay.mat);
+          Object.assign(day.arb, importedDay.arb);
           Object.assign(day.sonst, importedDay.sonst);
           Object.assign(day.muendl, importedDay.muendl);
-          ["hw","mat","sonst"].forEach(cat => {
+          ["hw","mat","arb","sonst"].forEach(cat => {
             importedDay.done[cat].forEach(p => { if(!day.done[cat].includes(p)) day.done[cat].push(p); });
           });
 
@@ -2458,7 +2601,12 @@ width: 28px; height: 24px;}
     rebuildMatByKey();
     saveMatOptions();
 
-    sonstVorschlaege.length = 0;
+    arbOptions.length = 0;
+    DEFAULT_ARB_OPTIONS.forEach(o => arbOptions.push({ ...o }));
+    rebuildArbByKey();
+    saveArbOptions();
+
+sonstVorschlaege.length = 0;
     DEFAULT_SONST_VORSCHLAEGE.forEach(s => sonstVorschlaege.push(s));
     sortSuggestions();
     saveSuggestions();
@@ -2572,6 +2720,114 @@ width: 28px; height: 24px;}
     renderMatSuggestionsList();
   }
 
+  // ---- Einstellungen: Arbeitsverhalten-Auswahl verwalten ----
+  function renderArbOptionsList(){
+    const list = document.getElementById("arbOptionList");
+    list.innerHTML = "";
+    if(arbOptions.length === 0){
+      list.innerHTML = `<div class="emptylist">Noch keine Auswahl angelegt.</div>`;
+    }
+    arbOptions.forEach((o, idx) => {
+      const row = document.createElement("div");
+      row.className = "listrow";
+
+      const label = document.createElement("span");
+      label.className = "rowlabel";
+      label.textContent = `${o.icon} ${o.label}`;
+      label.title = "Antippen zum Bearbeiten";
+      label.addEventListener("click", () => startEditArbOption(row, idx));
+      row.appendChild(label);
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "iconbtn";
+      editBtn.textContent = "✎";
+      editBtn.title = "Bearbeiten";
+      editBtn.addEventListener("click", () => startEditArbOption(row, idx));
+      row.appendChild(editBtn);
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "iconbtn danger";
+      delBtn.textContent = "×";
+      delBtn.title = "Eintrag entfernen";
+      delBtn.addEventListener("click", () => {
+        if(!confirm(`„${o.label}" wirklich entfernen? Bereits erfasste Einträge bleiben erhalten.`)) return;
+        arbOptions.splice(idx, 1);
+        rebuildArbByKey();
+        saveArbOptions();
+        renderArbOptionsList();
+        renderTable();
+      });
+      row.appendChild(delBtn);
+
+      list.appendChild(row);
+    });
+  }
+
+  function startEditArbOption(row, idx){
+    if(row.querySelector("input")) return;
+    const label = row.querySelector(".rowlabel");
+    const o = arbOptions[idx];
+
+    const iconInput = document.createElement("input");
+    iconInput.type = "text";
+    iconInput.className = "editfield";
+    iconInput.maxLength = 8;
+    iconInput.value = o.icon;
+    iconInput.style.cssText = "flex:0 0 52px; width:52px; min-width:0; text-align:center;";
+
+    const labelInput = document.createElement("input");
+    labelInput.type = "text";
+    labelInput.className = "editfield";
+    labelInput.style.minWidth = "0";
+    labelInput.value = o.label;
+
+    label.replaceWith(iconInput);
+    iconInput.after(labelInput);
+    iconInput.focus();
+    iconInput.select();
+
+    let committed = false;
+    const commit = () => {
+      if(committed) return;
+      committed = true;
+      const icon = iconInput.value.trim();
+      const text = labelInput.value.trim();
+      if(icon) o.icon = icon;
+      if(text) o.label = text;
+      rebuildArbByKey();
+      saveArbOptions();
+      renderArbOptionsList();
+      renderTable();
+    };
+    // Erst speichern, wenn der Fokus beide Felder verlassen hat
+    const onBlur = () => setTimeout(() => {
+      if(document.activeElement !== iconInput && document.activeElement !== labelInput) commit();
+    }, 0);
+    [iconInput, labelInput].forEach(inp => {
+      inp.addEventListener("keydown", (e) => { if(e.key === "Enter") commit(); });
+      inp.addEventListener("blur", onBlur);
+    });
+  }
+
+  document.getElementById("addArbOptionBtn").addEventListener("click", addArbOption);
+  ["newArbIconInput", "newArbLabelInput"].forEach(id => {
+    document.getElementById(id).addEventListener("keydown", (e) => { if(e.key === "Enter") addArbOption(); });
+  });
+  function addArbOption(){
+    const iconInput = document.getElementById("newArbIconInput");
+    const labelInput = document.getElementById("newArbLabelInput");
+    const icon = iconInput.value.trim();
+    const val = labelInput.value.trim();
+    if(!val) return;
+    if(!icon){ iconInput.focus(); return; }
+    arbOptions.push({ key: uniqueArbKey(val), label: val, icon });
+    rebuildArbByKey();
+    saveArbOptions();
+    iconInput.value = "";
+    labelInput.value = "";
+    renderArbOptionsList();
+  }
+
   // ---- Einstellungen: Sonstiges-Vorschläge verwalten ----
   function renderSuggestionsList(){
     const list = document.getElementById("suggestionList");
@@ -2658,6 +2914,7 @@ width: 28px; height: 24px;}
     renderClassSettingsList();
     renderPupilSettingsList();
     renderMatSuggestionsList();
+    renderArbOptionsList();
     renderSuggestionsList();
     document.getElementById("settingsOverlay").classList.add("show");
   }
