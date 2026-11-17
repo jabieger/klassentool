@@ -42,7 +42,7 @@
   }
   h1{ font-size:18px; font-weight:700; margin:0; letter-spacing:-0.01em; }
 
-  .header-left{ display:flex; align-items:center; gap:10px; }
+  .header-left{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 
   /* ---- Klassen-Auswahlmenü ---- */
   .classpicker{ position:relative; }
@@ -523,9 +523,64 @@ width: 28px; height: 24px;}
   }
 
   /* ---- Ansichts-Umschalter (Erfassung / Sitzplan / Zufall) ---- */
-  .view-select{
-    border:1px solid var(--line); border-radius:10px; background:var(--surface);
-    padding:8px 10px; font:inherit; font-size:13px; font-weight:700; color:var(--ink); cursor:pointer;
+  .view-tabs{ display:flex; background:var(--stripe); border:1px solid var(--line); border-radius:10px; padding:2px; flex-shrink:0; }
+  .view-tabs button{
+    border:none; background:transparent; height:34px; padding:0 11px; font:inherit; font-size:13px; font-weight:700;
+    color:var(--muted); border-radius:8px; cursor:pointer; white-space:nowrap;
+  }
+  .view-tabs button.active{ background:var(--ink); color:#fff; }
+
+  /* ---- Stunde-Ansicht (Infos + ToDos pro Klasse) ---- */
+  #stundeView{ padding:0 18px; }
+  .st-wrap{ display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; max-width:1100px; margin:0 auto; }
+  @media (max-width: 760px){ .st-wrap{ grid-template-columns:1fr; } }
+  .st-col{ background:var(--surface); border:1.5px solid var(--line); border-radius:14px; padding:12px 12px 8px; }
+  .st-col.drop{ border-color:var(--accent); }
+  .st-col h2{
+    margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted);
+    font-weight:700; display:flex; justify-content:space-between; align-items:center;
+  }
+  .st-count{ background:var(--stripe); border-radius:10px; padding:1px 8px; font-size:12px; }
+  .st-add{ display:flex; gap:6px; margin-bottom:6px; }
+  .st-add input{
+    flex:1; min-width:0; border:1.5px solid var(--line); border-radius:10px; padding:9px 12px;
+    font:inherit; font-size:16px; background:var(--stripe); color:var(--ink);
+  }
+  .st-add input:focus{ outline:none; border-color:var(--accent); background:var(--surface); }
+  .st-add button{ border:none; background:var(--ink); color:#fff; border-radius:10px; width:42px; font-size:20px; cursor:pointer; flex-shrink:0; }
+  .st-list{ list-style:none; margin:0; padding:0; min-height:8px; }
+  .st-open:empty::before{ content:attr(data-empty); display:block; padding:10px 4px; font-size:13px; color:var(--muted); }
+  .st-item{ display:flex; align-items:center; gap:4px; padding:2px 0; border-bottom:1px solid var(--line); background:var(--surface); }
+  .st-item:last-child{ border-bottom:none; }
+  .st-grip{
+    width:30px; height:42px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    color:var(--muted); font-size:16px; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none;
+  }
+  .st-check{
+    width:30px; height:30px; border-radius:50%; border:2px solid #C9C6BB; background:var(--surface); color:#fff;
+    font-size:15px; font-weight:700; cursor:pointer; flex-shrink:0; padding:0; line-height:1;
+  }
+  .st-item.done .st-check{ background:var(--ink); border-color:var(--ink); }
+  .st-grip.off{ visibility:hidden; pointer-events:none; }
+  /* Offene Infos: kräftig grün, damit sie sofort ins Auge springen */
+  .st-col[data-kind="info"] .st-open .st-item{
+    background:#BFE5B0; border:1px solid #9ACF86; border-radius:10px; margin:5px 0; padding:3px 4px 3px 0;
+  }
+  .st-col[data-kind="info"] .st-open .st-item.done{ background:var(--stripe); border-color:var(--line); }
+  .st-item.done{ transition:background .2s ease; }
+  .st-text{ flex:1; min-width:0; padding:9px 4px; font-size:16px; line-height:1.3; word-break:break-word; border-radius:6px; }
+  .st-text:focus{ outline:none; background:var(--stripe); }
+  .st-item.done .st-text{ color:var(--muted); text-decoration:line-through; }
+  .st-del{ border:none; background:transparent; color:var(--muted); font-size:15px; width:34px; height:34px; cursor:pointer; flex-shrink:0; }
+  .st-done-toggle{
+    display:block; width:100%; text-align:left; background:none; border:none; border-top:1px solid var(--line);
+    margin-top:6px; padding:10px 2px 8px; font:inherit; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer;
+  }
+  .st-item.dragging{ display:none; }
+  .st-ph{ height:44px; border:2px dashed var(--accent); border-radius:10px; background:#E4EAFB; margin:3px 0; }
+  .st-ghost{
+    position:fixed; z-index:300; pointer-events:none; border:1px solid var(--line); border-radius:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.18); opacity:.96;
   }
 
   /* ---- Zufall-Ansicht ---- */
@@ -628,11 +683,12 @@ width: 28px; height: 24px;}
       </button>
       <div class="classpicker-menu" id="classpickerMenu"></div>
     </div>
-    <select class="view-select" id="viewSelect">
-      <option value="erfassung">📋 Erfassung</option>
-      <option value="sitzplan">🪑 Sitzplan</option>
-      <option value="zufall">🎲 Zufall</option>
-    </select>
+    <div class="view-tabs" id="viewTabs">
+      <button data-view="stunde" class="active">📌 Stunde</button>
+      <button data-view="erfassung">📋 Erfassung</button>
+      <button data-view="sitzplan">🪑 Sitzplan</button>
+      <button data-view="zufall">🎲 Zufall</button>
+    </div>
   </div>
   <div class="header-controls">
     <div class="datepicker">
@@ -644,7 +700,26 @@ width: 28px; height: 24px;}
   </div>
 </header>
 
-<div id="erfassungView">
+<div id="stundeView">
+  <div class="st-wrap">
+    <section class="st-col" data-kind="info">
+      <h2><span>Infos</span><span class="st-count">0</span></h2>
+      <form class="st-add"><input type="text" placeholder="Neue Info …" enterkeyhint="done" autocomplete="off" aria-label="Neue Info"><button type="submit" aria-label="Info hinzufügen">+</button></form>
+      <ul class="st-list st-open" data-empty="Keine Infos"></ul>
+      <button type="button" class="st-done-toggle"></button>
+      <ul class="st-list st-done"></ul>
+    </section>
+    <section class="st-col" data-kind="todo">
+      <h2><span>ToDos</span><span class="st-count">0</span></h2>
+      <form class="st-add"><input type="text" placeholder="Neues ToDo …" enterkeyhint="done" autocomplete="off" aria-label="Neues ToDo"><button type="submit" aria-label="ToDo hinzufügen">+</button></form>
+      <ul class="st-list st-open" data-empty="Nichts zu tun"></ul>
+      <button type="button" class="st-done-toggle"></button>
+      <ul class="st-list st-done"></ul>
+    </section>
+  </div>
+</div>
+
+<div id="erfassungView" style="display:none;">
 <div class="cl-toolbar" id="clToolbar">
   <div class="datamode-toggle" id="dataModeToggle">
     <button class="active" data-mode="muendl">🗣️ Mündlich</button>
@@ -1892,6 +1967,7 @@ width: 28px; height: 24px;}
     classpickerLabel.textContent = activeClass().name;
     renderTable();
     spSelection = null;
+    if(currentView === "stunde") renderStundeView();
     if(currentView === "sitzplan") renderSitzplanView();
     if(currentView === "zufall") renderZufallView();
     if(document.getElementById("settingsOverlay").classList.contains("show")){
@@ -2929,7 +3005,7 @@ sonstVorschlaege.length = 0;
   // ==================================================================
   // ---- Sitzplan (pro Klasse, mehrere Pläne möglich) ----
   // ==================================================================
-  let currentView = "erfassung";
+  let currentView = "stunde";
   let spSelection = null;
   let spLayoutEditMode = false;
   let spHighlightEditMode = false;
@@ -3255,14 +3331,237 @@ sonstVorschlaege.length = 0;
   document.getElementById("spPrintBtn").addEventListener("click", printSitzplan);
   document.getElementById("spUnassignedZone").addEventListener("click", spOnUnassignedZoneClick);
 
-  document.getElementById("viewSelect").addEventListener("change", (e) => {
-    currentView = e.target.value;
-    document.getElementById("erfassungView").style.display = currentView === "erfassung" ? "" : "none";
-    document.getElementById("sitzplanView").style.display = currentView === "sitzplan" ? "" : "none";
-    document.getElementById("zufallView").style.display = currentView === "zufall" ? "" : "none";
-    if(currentView === "sitzplan") renderSitzplanView();
-    if(currentView === "zufall") renderZufallView();
+  // ---- Ansichts-Umschalter (Tab-Leiste): alle Ansichten bleiben im DOM, es wird nur ein-/ausgeblendet ----
+  function setView(view){
+    currentView = view;
+    ["stunde", "erfassung", "sitzplan", "zufall"].forEach(n => {
+      document.getElementById(n + "View").style.display = (n === view) ? "" : "none";
+    });
+    document.querySelectorAll("#viewTabs button").forEach(b => b.classList.toggle("active", b.dataset.view === view));
+    document.querySelector(".datepicker").style.display = (view === "stunde") ? "none" : ""; // Stunde-Ansicht ist datumslos
+    if(view === "stunde") renderStundeView();
+    if(view === "sitzplan") renderSitzplanView();
+    if(view === "zufall") renderZufallView();
+  }
+  document.querySelectorAll("#viewTabs button").forEach(b => {
+    b.addEventListener("click", () => setView(b.dataset.view));
   });
+
+  // ==================================================================
+  // ---- Stunde: Infos + ToDos pro Klasse (datumslos, verschiebbar) ----
+  // ==================================================================
+  // Datenmodell: c.todos = [{ id, text, kind: "info" | "todo", done }]; Array-Reihenfolge = Anzeigereihenfolge je Art.
+  // done=true heißt: abgehakt (ToDo) bzw. ausgeblendet (Info) und liegt im eingeklappten Bereich.
+  const ST_DONE_LABEL = { info: "Ausgeblendet", todo: "Erledigt" };
+  const stDoneOpen = { info: false, todo: false };
+  const stView = document.getElementById("stundeView");
+
+  function todosOf(c){ if(!Array.isArray(c.todos)) c.todos = []; return c.todos; }
+  function stFind(id){ return todosOf(activeClass()).find(t => t.id === id); }
+  function stCol(kind){ return stView.querySelector('.st-col[data-kind="' + kind + '"]'); }
+
+  function stBuildRow(t){
+    const li = document.createElement("li");
+    const pending = stPending.has(t.id); // gerade abgehakt: bleibt kurz grau/durchgestrichen in der offenen Liste stehen
+    li.className = "st-item" + (t.done ? " done" : "") + (pending ? " pending" : "");
+    li.dataset.id = t.id;
+    if(!t.done || pending){
+      const grip = document.createElement("span");
+      grip.className = "st-grip" + (pending ? " off" : ""); grip.textContent = "⠿"; grip.title = "Zum Verschieben ziehen";
+      li.appendChild(grip);
+    }
+    const chk = document.createElement("button");
+    chk.type = "button"; chk.className = "st-check"; chk.textContent = t.done ? "✓" : "";
+    chk.setAttribute("aria-label", t.done ? "Wieder öffnen" : (t.kind === "info" ? "Ausblenden" : "Abhaken"));
+    li.appendChild(chk);
+    const txt = document.createElement("span");
+    txt.className = "st-text"; txt.textContent = t.text;
+    if(!t.done) txt.contentEditable = "true";
+    li.appendChild(txt);
+    const del = document.createElement("button");
+    del.type = "button"; del.className = "st-del"; del.textContent = "✕"; del.setAttribute("aria-label", "Löschen");
+    li.appendChild(del);
+    return li;
+  }
+
+  function renderStundeView(){
+    const list = todosOf(activeClass());
+    ["info", "todo"].forEach(kind => {
+      const col = stCol(kind);
+      const openUl = col.querySelector(".st-open"), doneUl = col.querySelector(".st-done");
+      openUl.textContent = ""; doneUl.textContent = "";
+      let open = 0, done = 0;
+      list.forEach(t => {
+        if(t.kind !== kind) return;
+        if(t.done && !stPending.has(t.id)){ done++; doneUl.appendChild(stBuildRow(t)); }
+        else { if(!t.done) open++; openUl.appendChild(stBuildRow(t)); }
+      });
+      col.querySelector(".st-count").textContent = open;
+      const tog = col.querySelector(".st-done-toggle");
+      tog.style.display = done ? "" : "none";
+      tog.textContent = (stDoneOpen[kind] ? "▾ " : "▸ ") + ST_DONE_LABEL[kind] + " (" + done + ")";
+      doneUl.style.display = (done && stDoneOpen[kind]) ? "" : "none";
+    });
+  }
+
+  function stAdd(kind, text){
+    text = text.trim().replace(/\s+/g, " ");
+    if(!text) return;
+    todosOf(activeClass()).push({ id: "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), text, kind, done: false });
+    saveClasses(); renderStundeView();
+  }
+  // Abgehakte Einträge bleiben 1 s grau + durchgestrichen stehen, bevor sie in "Erledigt"/"Ausgeblendet" wandern.
+  const ST_MOVE_DELAY = 1000;
+  const stPending = new Map(); // id -> Timeout
+  function stCancelPending(id){
+    if(stPending.has(id)){ clearTimeout(stPending.get(id)); stPending.delete(id); }
+  }
+  function stToggleDone(id){
+    const t = stFind(id); if(!t) return;
+    if(stPending.has(id)){ // innerhalb der Wartezeit erneut angetippt: Abhaken zurücknehmen
+      stCancelPending(id); t.done = false;
+      saveClasses(); renderStundeView(); return;
+    }
+    t.done = !t.done;
+    if(t.done){
+      stPending.set(id, setTimeout(() => { stPending.delete(id); renderStundeView(); }, ST_MOVE_DELAY));
+    }
+    saveClasses(); renderStundeView();
+    if(t.done){
+      showToast(t.kind === "info" ? "Info ausgeblendet" : "Erledigt", () => {
+        stCancelPending(id); t.done = false; saveClasses(); renderStundeView();
+      });
+    }
+  }
+  function stDelete(id){
+    const list = todosOf(activeClass());
+    const i = list.findIndex(t => t.id === id); if(i < 0) return;
+    const t = list.splice(i, 1)[0];
+    stCancelPending(id);
+    saveClasses(); renderStundeView();
+    showToast("Gelöscht", () => { list.splice(Math.min(i, list.length), 0, t); saveClasses(); renderStundeView(); });
+  }
+
+  stView.querySelectorAll(".st-add").forEach(form => {
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = form.querySelector("input");
+      stAdd(form.closest(".st-col").dataset.kind, input.value);
+      input.value = ""; input.focus(); // Fokus bleibt im Feld: mehrere Einträge hintereinander tippen
+    });
+  });
+  stView.addEventListener("click", (e) => {
+    const li = e.target.closest(".st-item");
+    if(e.target.closest(".st-check") && li) stToggleDone(li.dataset.id);
+    else if(e.target.closest(".st-del") && li) stDelete(li.dataset.id);
+    else if(e.target.closest(".st-done-toggle")){
+      const kind = e.target.closest(".st-col").dataset.kind;
+      stDoneOpen[kind] = !stDoneOpen[kind]; renderStundeView();
+    }
+  });
+  // Text direkt in der Zeile bearbeiten
+  stView.addEventListener("focusout", (e) => {
+    const el = e.target.closest(".st-text"); if(!el) return;
+    const t = stFind(el.closest(".st-item").dataset.id); if(!t) return;
+    const v = el.textContent.trim().replace(/\s+/g, " ");
+    if(v && v !== t.text){ t.text = v; saveClasses(); }
+    el.textContent = t.text;
+  });
+  stView.addEventListener("keydown", (e) => {
+    const el = e.target.closest(".st-text"); if(!el) return;
+    if(e.key === "Enter"){ e.preventDefault(); el.blur(); }
+    else if(e.key === "Escape"){ el.textContent = stFind(el.closest(".st-item").dataset.id).text; el.blur(); }
+  });
+  stView.addEventListener("paste", (e) => {
+    if(!e.target.closest(".st-text")) return;
+    e.preventDefault();
+    document.execCommand("insertText", false, (e.clipboardData.getData("text/plain") || "").replace(/\s+/g, " "));
+  });
+
+  // ---- Verschieben per Pointer-Events (Touch + Maus), Griff links an jeder Zeile ----
+  // Die Originalzeile bleibt im DOM (ausgeblendet), ein Platzhalter markiert die Zielposition.
+  stView.addEventListener("pointerdown", (e) => {
+    const grip = e.target.closest(".st-grip");
+    if(!grip || (e.pointerType === "mouse" && e.button !== 0)) return;
+    e.preventDefault();
+    stStartDrag(e, grip.closest(".st-item"));
+  });
+
+  function stStartDrag(e, li){
+    const rect = li.getBoundingClientRect();
+    const startX = e.clientX, offY = e.clientY - rect.top;
+    const ghost = li.cloneNode(true);
+    ghost.className = "st-item st-ghost";
+    ghost.style.width = rect.width + "px"; ghost.style.left = rect.left + "px"; ghost.style.top = rect.top + "px";
+    document.body.appendChild(ghost);
+    const ph = document.createElement("li");
+    ph.className = "st-ph"; ph.style.height = rect.height + "px";
+    li.parentNode.insertBefore(ph, li);
+    li.classList.add("dragging");
+    document.body.style.userSelect = "none"; document.body.style.webkitUserSelect = "none";
+
+    let x = e.clientX, y = e.clientY, raf = 0;
+    function place(){
+      for(const el of document.elementsFromPoint(x, y)){
+        if(el.closest(".st-ph")) break; // Platzhalter liegt schon unter dem Zeiger
+        const it = el.closest(".st-open > .st-item");
+        if(it && it !== li){
+          const r = it.getBoundingClientRect();
+          it.parentNode.insertBefore(ph, y < r.top + r.height / 2 ? it : it.nextSibling);
+          break;
+        }
+        const col = el.closest(".st-col");
+        if(col){
+          const ul = col.querySelector(".st-open");
+          if(y < ul.getBoundingClientRect().top) ul.insertBefore(ph, ul.firstChild); else ul.appendChild(ph);
+          break;
+        }
+      }
+      stView.querySelectorAll(".st-col").forEach(c => c.classList.toggle("drop", c === ph.closest(".st-col")));
+    }
+    function tick(){
+      if(y < 70) window.scrollBy(0, -12); else if(y > window.innerHeight - 70) window.scrollBy(0, 12);
+      place();
+      raf = requestAnimationFrame(tick);
+    }
+    function onMove(ev){
+      x = ev.clientX; y = ev.clientY;
+      ghost.style.left = (rect.left + x - startX) + "px"; ghost.style.top = (y - offY) + "px";
+    }
+    function finish(commit){
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+      cancelAnimationFrame(raf);
+      ghost.remove();
+      document.body.style.userSelect = ""; document.body.style.webkitUserSelect = "";
+      stView.querySelectorAll(".st-col").forEach(c => c.classList.remove("drop"));
+      li.classList.remove("dragging");
+      if(commit && ph.parentNode) ph.replaceWith(li); else ph.remove();
+      if(commit){
+        // Neue Reihenfolge und Art (Info/ToDo) aus dem DOM übernehmen; erledigte Einträge behalten ihren Platz hinten
+        const list = todosOf(activeClass());
+        const byId = new Map(list.map(t => [t.id, t]));
+        const next = [];
+        ["info", "todo"].forEach(kind => {
+          stCol(kind).querySelectorAll(".st-open > .st-item").forEach(r => {
+            const t = byId.get(r.dataset.id);
+            if(t){ t.kind = kind; next.push(t); byId.delete(t.id); }
+          });
+        });
+        list.forEach(t => { if(byId.has(t.id)) next.push(t); });
+        list.splice(0, list.length, ...next);
+        saveClasses();
+      }
+      renderStundeView();
+    }
+    function onUp(){ finish(true); }
+    function onCancel(){ finish(false); }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+    raf = requestAnimationFrame(tick);
+  }
 
   // ==================================================================
   // ---- Checklisten (mehrere pro Klasse, unabhängig vom Tagesdatum) ----
@@ -3601,6 +3900,7 @@ sonstVorschlaege.length = 0;
 
   classpickerLabel.textContent = activeClass().name;
   applyDate(todayISO());
+  setView("stunde"); // App startet auf der Stunde-Ansicht
 
   // ---- Automatischer Datumswechsel, wenn das Tool über Mitternacht hinaus geöffnet bleibt ----
   let trackedToday = todayISO();
