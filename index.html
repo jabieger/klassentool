@@ -534,84 +534,76 @@ width: 28px; height: 24px;}
     .view-tabs button{ padding:0 7px; font-size:12px; }
   }
 
-  /* ---- Stunde-Ansicht (Infos + ToDos pro Klasse) ---- */
+  /* ---- Stunde-Ansicht: eine kompakte Spalte (Infos, Nacharbeit, ToDos) ---- */
   #stundeView{ padding:0 18px; }
-  .st-wrap{ display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; max-width:1100px; margin:0 auto; }
-  @media (max-width: 760px){ .st-wrap{ grid-template-columns:1fr; } }
-  .st-col{ background:var(--surface); border:1.5px solid var(--line); border-radius:14px; padding:12px 12px 8px; }
-  .st-col.drop{ border-color:var(--accent); }
-  .st-col h2{
-    margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted);
-    font-weight:700; display:flex; justify-content:space-between; align-items:center;
-  }
-  .st-count{ background:var(--stripe); border-radius:10px; padding:1px 8px; font-size:12px; }
-  .st-add{ display:flex; gap:6px; margin-bottom:6px; }
-  .st-add input{
-    flex:1; min-width:0; border:1.5px solid var(--line); border-radius:10px; padding:9px 12px;
-    font:inherit; font-size:16px; background:var(--stripe); color:var(--ink);
-  }
-  .st-add input:focus{ outline:none; border-color:var(--accent); background:var(--surface); }
-  .st-add .st-add-go{ border:none; background:var(--ink); color:#fff; border-radius:10px; width:42px; font-size:20px; cursor:pointer; flex-shrink:0; }
-  .st-add .st-add-go:disabled{ opacity:.35; cursor:default; }
-  .st-list{ list-style:none; margin:0; padding:0; min-height:8px; }
-  .st-open:empty::before{ content:attr(data-empty); display:block; padding:10px 4px; font-size:13px; color:var(--muted); }
-  .st-item{ display:flex; align-items:center; gap:4px; padding:2px 0; border-bottom:1px solid var(--line); background:var(--surface); }
+  .st-wrap{ max-width:480px; margin:0 auto; }
+  .st-col{ margin-bottom:18px; border-radius:10px; }
+  .st-col.drop{ background:rgba(36,84,199,.04); box-shadow:0 0 0 6px rgba(36,84,199,.04); }
+  .st-col h2{ margin:0 0 6px; font-size:15px; font-weight:600; display:flex; justify-content:space-between; align-items:baseline; }
+  .st-col h2.st-na-head{ margin-top:14px; }
+  .st-count{ font-size:12px; font-weight:400; color:var(--muted); }
+  .st-add{ display:flex; align-items:center; gap:10px; margin-bottom:6px; border-bottom:1px solid var(--line); }
+  .st-add:focus-within{ border-bottom-color:var(--ink); }
+  .st-add input{ flex:1; min-width:0; border:none; background:transparent; padding:7px 0; font:inherit; font-size:16px; color:var(--ink); }
+  .st-add input:focus{ outline:none; }
+  .st-add .st-add-go{ border:none; background:transparent; color:var(--ink); font-size:22px; line-height:1; width:28px; height:30px; cursor:pointer; flex-shrink:0; padding:0; }
+  .st-add .st-add-go:disabled{ opacity:.3; cursor:default; }
+  .st-list{ list-style:none; margin:0; padding:0; min-height:4px; }
+  .st-open:empty::before{ content:attr(data-empty); display:block; padding:6px 0; font-size:13px; color:var(--muted); }
+  .st-item{ display:flex; align-items:center; gap:2px; border-bottom:1px solid var(--line); }
   .st-item:last-child{ border-bottom:none; }
   .st-grip{
-    width:30px; height:42px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
-    color:var(--muted); font-size:16px; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none;
+    width:24px; height:36px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    color:var(--muted); font-size:14px; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none;
   }
-  .st-check{
-    width:30px; height:30px; border-radius:50%; border:2px solid #C9C6BB; background:var(--surface); color:#fff;
-    font-size:15px; font-weight:700; cursor:pointer; flex-shrink:0; padding:0; line-height:1;
-  }
-  .st-item.done .st-check{ background:var(--ink); border-color:var(--ink); }
   .st-grip.off{ visibility:hidden; pointer-events:none; }
-  /* Offene Infos: kräftig grün, damit sie sofort ins Auge springen */
-  .st-col[data-kind="info"] .st-open .st-item{
-    background:#BFE5B0; border:1px solid #9ACF86; border-radius:10px; margin:5px 0; padding:3px 4px 3px 0;
+  .st-check{
+    position:relative; width:22px; height:22px; border-radius:50%; border:1.5px solid #BDBAAE; background:var(--surface);
+    color:#fff; font-size:12px; font-weight:700; cursor:pointer; flex-shrink:0; padding:0; line-height:1; margin-right:6px;
   }
-  .st-col[data-kind="info"] .st-open .st-item.done{ background:var(--stripe); border-color:var(--line); }
+  .st-check::after{ content:""; position:absolute; inset:-8px; } /* größere Tippfläche */
+  .st-item.done .st-check{ background:var(--ink); border-color:var(--ink); }
   .st-item.done{ transition:background .2s ease; }
-  /* Nacharbeiten: eigene Gruppe, immer unter den übrigen Infos, kräftig rot */
-  .st-na-list{ margin-top:8px; }
-  .st-na-list .st-item{
-    background:#F2B8B0; border:1px solid #E08D82; border-radius:10px; margin:5px 0; padding:3px 4px 3px 0;
-  }
-  .st-na-list .st-item.done{ background:var(--stripe); border-color:var(--line); }
-  .st-na-list .st-item .st-text{ cursor:pointer; }
-  .st-na-toggle{
-    border:1.5px solid var(--line); background:var(--surface); border-radius:10px; font:inherit; font-size:12.5px;
-    font-weight:700; color:var(--ink); padding:0 10px; cursor:pointer; flex-shrink:0; white-space:nowrap;
-  }
-  .st-na-toggle.open{ background:var(--ink); border-color:var(--ink); color:#fff; }
-  .st-add .st-na-pupil{
-    display:none; flex:1; min-width:0; font:inherit; font-size:16px; padding:9px 10px; border:1.5px solid var(--line);
-    border-radius:10px; background:var(--stripe); color:var(--ink);
-  }
-  .st-add.na-mode input{ display:none; }
-  .st-add.na-mode .st-na-pupil{ display:block; }
-  .st-na-panel{ display:none; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
-  .st-na-panel.show{ display:flex; }
-  .st-stepper{ display:flex; align-items:center; border:1.5px solid var(--line); border-radius:10px; background:var(--surface); overflow:hidden; }
-  .st-stepper button{ border:none; background:transparent; width:38px; height:36px; font:inherit; font-size:20px; font-weight:700; color:var(--ink); cursor:pointer; }
-  .st-stepper button:disabled{ opacity:.3; cursor:default; }
-  .st-stepper .st-na-min{ min-width:62px; text-align:center; font-size:14px; font-weight:700; }
-  .st-seg{ display:flex; background:var(--stripe); border:1px solid var(--line); border-radius:10px; padding:2px; }
-  .st-seg button{ border:none; background:transparent; height:32px; padding:0 12px; font:inherit; font-size:13px; font-weight:700; color:var(--muted); border-radius:8px; cursor:pointer; }
-  .st-seg button.on{ background:var(--ink); color:#fff; }
-  .st-text{ flex:1; min-width:0; padding:9px 4px; font-size:16px; line-height:1.3; word-break:break-word; border-radius:6px; }
+  .st-text{ flex:1; min-width:0; padding:7px 4px; font-size:15px; line-height:1.3; word-break:break-word; border-radius:6px; }
   .st-text:focus{ outline:none; background:var(--stripe); }
   .st-item.done .st-text{ color:var(--muted); text-decoration:line-through; }
-  .st-del{ border:none; background:transparent; color:var(--muted); font-size:15px; width:34px; height:34px; cursor:pointer; flex-shrink:0; }
+  .st-del{ border:none; background:transparent; color:var(--muted); font-size:14px; width:30px; height:30px; cursor:pointer; flex-shrink:0; }
+  /* Offene Infos: weiches Salbeigrün; Nacharbeiten: weiches Rosa */
+  .st-col[data-kind="info"] .st-open .st-item{ background:#EEF3E8; border:1px solid #D2E0C6; border-radius:8px; margin-bottom:4px; }
+  .st-col[data-kind="info"] .st-open .st-item .st-check{ border-color:#9DB88C; }
+  .st-na-list .st-item{ background:#F8EAE7; border:1px solid #EBCFC9; border-radius:8px; margin-bottom:4px; }
+  .st-na-list .st-item .st-check{ border-color:#D3A29B; }
+  .st-col[data-kind="info"] .st-open .st-item.done, .st-na-list .st-item.done{ background:var(--stripe); border-color:var(--line); }
+  .st-col[data-kind="info"] .st-item.done .st-check, .st-na-list .st-item.done .st-check{ border-color:var(--ink); }
+  .st-na-list .st-text{ display:flex; align-items:baseline; cursor:pointer; }
+  .st-na-detail{ margin-left:auto; padding-left:10px; font-size:13px; color:#7A3B35; white-space:nowrap; }
+  .st-item.done .st-na-detail{ color:inherit; }
+  /* Nacharbeit-Eingabe: Der Text-Link neben dem Feld schaltet die Zeile zur Schülerauswahl um */
+  .st-na-toggle{
+    border:none; border-bottom:1px solid var(--muted); background:none; font:inherit; font-size:12px; color:var(--muted);
+    padding:0; cursor:pointer; flex-shrink:0; white-space:nowrap; line-height:1.2;
+  }
+  .st-na-toggle.open{ color:var(--ink); border-bottom-color:var(--ink); font-weight:600; }
+  .st-add .st-na-pupil{ display:none; flex:1; min-width:0; font:inherit; font-size:16px; padding:7px 0; border:none; background:transparent; color:var(--ink); }
+  .st-add.na-mode input{ display:none; }
+  .st-add.na-mode .st-na-pupil{ display:block; }
+  .st-na-panel{ display:none; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 8px; }
+  .st-na-panel.show{ display:flex; }
+  .st-stepper{ display:flex; align-items:center; border:1px solid var(--line); border-radius:8px; background:var(--surface); overflow:hidden; }
+  .st-stepper button{ border:none; background:transparent; width:34px; height:30px; font:inherit; font-size:18px; font-weight:600; color:var(--ink); cursor:pointer; }
+  .st-stepper button:disabled{ opacity:.3; cursor:default; }
+  .st-stepper .st-na-min{ min-width:58px; text-align:center; font-size:14px; font-weight:600; }
+  .st-seg{ display:flex; background:var(--stripe); border:1px solid var(--line); border-radius:8px; padding:2px; }
+  .st-seg button{ border:none; background:transparent; height:26px; padding:0 12px; font:inherit; font-size:13px; font-weight:600; color:var(--muted); border-radius:6px; cursor:pointer; }
+  .st-seg button.on{ background:var(--ink); color:#fff; }
   .st-done-toggle{
-    display:block; width:100%; text-align:left; background:none; border:none; border-top:1px solid var(--line);
-    margin-top:6px; padding:10px 2px 8px; font:inherit; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer;
+    display:block; background:none; border:none; margin:0; padding:8px 0 0; text-align:left;
+    font:inherit; font-size:12px; color:var(--muted); cursor:pointer;
   }
   .st-item.dragging{ display:none; }
-  .st-ph{ height:44px; border:2px dashed var(--accent); border-radius:10px; background:#E4EAFB; margin:3px 0; }
+  .st-ph{ height:36px; border:1.5px dashed var(--accent); border-radius:8px; background:#E4EAFB; margin-bottom:4px; }
   .st-ghost{
-    position:fixed; z-index:300; pointer-events:none; border:1px solid var(--line); border-radius:10px;
+    position:fixed; z-index:300; pointer-events:none; background:var(--surface); border:1px solid var(--line); border-radius:8px;
     box-shadow:0 8px 24px rgba(0,0,0,.18); opacity:.96;
   }
 
@@ -754,6 +746,7 @@ width: 28px; height: 24px;}
         </div>
       </div>
       <ul class="st-list st-open" data-empty="Keine Infos"></ul>
+      <h2 class="st-na-head"><span>Nacharbeit</span><span class="st-count st-na-count">0</span></h2>
       <ul class="st-list st-na-list"></ul>
       <button type="button" class="st-done-toggle"></button>
       <ul class="st-list st-done"></ul>
@@ -3425,7 +3418,12 @@ sonstVorschlaege.length = 0;
     chk.setAttribute("aria-label", t.done ? "Wieder öffnen" : (t.kind === "info" ? "Ausblenden" : "Abhaken"));
     li.appendChild(chk);
     const txt = document.createElement("span");
-    txt.className = "st-text"; txt.textContent = t.text;
+    txt.className = "st-text";
+    if(t.type === "nacharbeit" && (!t.done || pending)){ // Name links, Dauer und Tag rechts
+      const nm = document.createElement("span"); nm.className = "st-na-name"; nm.textContent = t.pupil;
+      const dt = document.createElement("span"); dt.className = "st-na-detail"; dt.textContent = t.minutes + " Minuten · " + t.day;
+      txt.append(nm, dt);
+    } else txt.textContent = t.text;
     if(!t.done && t.type !== "nacharbeit") txt.contentEditable = "true"; // Nacharbeiten werden über das Formular bearbeitet
     li.appendChild(txt);
     const del = document.createElement("button");
@@ -3442,16 +3440,22 @@ sonstVorschlaege.length = 0;
       const naUl = col.querySelector(".st-na-list"); // nur in der Info-Spalte
       openUl.textContent = ""; doneUl.textContent = "";
       if(naUl) naUl.textContent = "";
-      let open = 0, done = 0;
+      let open = 0, done = 0, naOpen = 0;
       list.forEach(t => {
         if(t.kind !== kind) return;
         if(t.done && !stPending.has(t.id)){ done++; doneUl.appendChild(stBuildRow(t)); }
         else {
-          if(!t.done) open++;
-          (t.type === "nacharbeit" && naUl ? naUl : openUl).appendChild(stBuildRow(t)); // Nacharbeiten immer unten
+          const isNa = t.type === "nacharbeit" && naUl;
+          if(!t.done){ if(isNa) naOpen++; else open++; }
+          (isNa ? naUl : openUl).appendChild(stBuildRow(t)); // Nacharbeiten bilden eine eigene Gruppe unterhalb der Infos
         }
       });
-      if(naUl) naUl.style.display = naUl.children.length ? "" : "none";
+      if(naUl){
+        const show = naUl.children.length > 0;
+        naUl.style.display = show ? "" : "none";
+        col.querySelector(".st-na-head").style.display = show ? "" : "none";
+        col.querySelector(".st-na-count").textContent = naOpen;
+      }
       col.querySelector(".st-count").textContent = open;
       const tog = col.querySelector(".st-done-toggle");
       tog.style.display = done ? "" : "none";
