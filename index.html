@@ -529,6 +529,10 @@ width: 28px; height: 24px;}
     color:var(--muted); border-radius:8px; cursor:pointer; white-space:nowrap;
   }
   .view-tabs button.active{ background:var(--ink); color:#fff; }
+  @media (max-width: 430px){
+    .view-tabs{ max-width:100%; }
+    .view-tabs button{ padding:0 7px; font-size:12px; }
+  }
 
   /* ---- Stunde-Ansicht (Infos + ToDos pro Klasse) ---- */
   #stundeView{ padding:0 18px; }
@@ -547,7 +551,8 @@ width: 28px; height: 24px;}
     font:inherit; font-size:16px; background:var(--stripe); color:var(--ink);
   }
   .st-add input:focus{ outline:none; border-color:var(--accent); background:var(--surface); }
-  .st-add button{ border:none; background:var(--ink); color:#fff; border-radius:10px; width:42px; font-size:20px; cursor:pointer; flex-shrink:0; }
+  .st-add .st-add-go{ border:none; background:var(--ink); color:#fff; border-radius:10px; width:42px; font-size:20px; cursor:pointer; flex-shrink:0; }
+  .st-add .st-add-go:disabled{ opacity:.35; cursor:default; }
   .st-list{ list-style:none; margin:0; padding:0; min-height:8px; }
   .st-open:empty::before{ content:attr(data-empty); display:block; padding:10px 4px; font-size:13px; color:var(--muted); }
   .st-item{ display:flex; align-items:center; gap:4px; padding:2px 0; border-bottom:1px solid var(--line); background:var(--surface); }
@@ -568,6 +573,33 @@ width: 28px; height: 24px;}
   }
   .st-col[data-kind="info"] .st-open .st-item.done{ background:var(--stripe); border-color:var(--line); }
   .st-item.done{ transition:background .2s ease; }
+  /* Nacharbeiten: eigene Gruppe, immer unter den übrigen Infos, kräftig rot */
+  .st-na-list{ margin-top:8px; }
+  .st-na-list .st-item{
+    background:#F2B8B0; border:1px solid #E08D82; border-radius:10px; margin:5px 0; padding:3px 4px 3px 0;
+  }
+  .st-na-list .st-item.done{ background:var(--stripe); border-color:var(--line); }
+  .st-na-list .st-item .st-text{ cursor:pointer; }
+  .st-na-toggle{
+    border:1.5px solid var(--line); background:var(--surface); border-radius:10px; font:inherit; font-size:12.5px;
+    font-weight:700; color:var(--ink); padding:0 10px; cursor:pointer; flex-shrink:0; white-space:nowrap;
+  }
+  .st-na-toggle.open{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .st-add .st-na-pupil{
+    display:none; flex:1; min-width:0; font:inherit; font-size:16px; padding:9px 10px; border:1.5px solid var(--line);
+    border-radius:10px; background:var(--stripe); color:var(--ink);
+  }
+  .st-add.na-mode input{ display:none; }
+  .st-add.na-mode .st-na-pupil{ display:block; }
+  .st-na-panel{ display:none; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .st-na-panel.show{ display:flex; }
+  .st-stepper{ display:flex; align-items:center; border:1.5px solid var(--line); border-radius:10px; background:var(--surface); overflow:hidden; }
+  .st-stepper button{ border:none; background:transparent; width:38px; height:36px; font:inherit; font-size:20px; font-weight:700; color:var(--ink); cursor:pointer; }
+  .st-stepper button:disabled{ opacity:.3; cursor:default; }
+  .st-stepper .st-na-min{ min-width:62px; text-align:center; font-size:14px; font-weight:700; }
+  .st-seg{ display:flex; background:var(--stripe); border:1px solid var(--line); border-radius:10px; padding:2px; }
+  .st-seg button{ border:none; background:transparent; height:32px; padding:0 12px; font:inherit; font-size:13px; font-weight:700; color:var(--muted); border-radius:8px; cursor:pointer; }
+  .st-seg button.on{ background:var(--ink); color:#fff; }
   .st-text{ flex:1; min-width:0; padding:9px 4px; font-size:16px; line-height:1.3; word-break:break-word; border-radius:6px; }
   .st-text:focus{ outline:none; background:var(--stripe); }
   .st-item.done .st-text{ color:var(--muted); text-decoration:line-through; }
@@ -704,14 +736,31 @@ width: 28px; height: 24px;}
   <div class="st-wrap">
     <section class="st-col" data-kind="info">
       <h2><span>Infos</span><span class="st-count">0</span></h2>
-      <form class="st-add"><input type="text" placeholder="Neue Info …" enterkeyhint="done" autocomplete="off" aria-label="Neue Info"><button type="submit" aria-label="Info hinzufügen">+</button></form>
+      <form class="st-add">
+        <input type="text" placeholder="Neue Info …" enterkeyhint="done" autocomplete="off" aria-label="Neue Info">
+        <select class="st-na-pupil" aria-label="Schüler für Nacharbeit"></select>
+        <button type="button" class="st-na-toggle" aria-label="Nacharbeit eintragen">Nacharbeit</button>
+        <button type="submit" class="st-add-go" aria-label="Info hinzufügen">+</button>
+      </form>
+      <div class="st-na-panel">
+        <div class="st-stepper">
+          <button type="button" data-step="-10" aria-label="10 Minuten weniger">−</button>
+          <span class="st-na-min">10 Min.</span>
+          <button type="button" data-step="10" aria-label="10 Minuten mehr">+</button>
+        </div>
+        <div class="st-seg">
+          <button type="button" data-day="Donnerstag" aria-label="Donnerstag">Do</button>
+          <button type="button" data-day="Freitag" aria-label="Freitag">Fr</button>
+        </div>
+      </div>
       <ul class="st-list st-open" data-empty="Keine Infos"></ul>
+      <ul class="st-list st-na-list"></ul>
       <button type="button" class="st-done-toggle"></button>
       <ul class="st-list st-done"></ul>
     </section>
     <section class="st-col" data-kind="todo">
       <h2><span>ToDos</span><span class="st-count">0</span></h2>
-      <form class="st-add"><input type="text" placeholder="Neues ToDo …" enterkeyhint="done" autocomplete="off" aria-label="Neues ToDo"><button type="submit" aria-label="ToDo hinzufügen">+</button></form>
+      <form class="st-add"><input type="text" placeholder="Neues ToDo …" enterkeyhint="done" autocomplete="off" aria-label="Neues ToDo"><button type="submit" class="st-add-go" aria-label="ToDo hinzufügen">+</button></form>
       <ul class="st-list st-open" data-empty="Nichts zu tun"></ul>
       <button type="button" class="st-done-toggle"></button>
       <ul class="st-list st-done"></ul>
@@ -3365,6 +3414,7 @@ sonstVorschlaege.length = 0;
     const pending = stPending.has(t.id); // gerade abgehakt: bleibt kurz grau/durchgestrichen in der offenen Liste stehen
     li.className = "st-item" + (t.done ? " done" : "") + (pending ? " pending" : "");
     li.dataset.id = t.id;
+    if(t.type) li.dataset.type = t.type;
     if(!t.done || pending){
       const grip = document.createElement("span");
       grip.className = "st-grip" + (pending ? " off" : ""); grip.textContent = "⠿"; grip.title = "Zum Verschieben ziehen";
@@ -3376,7 +3426,7 @@ sonstVorschlaege.length = 0;
     li.appendChild(chk);
     const txt = document.createElement("span");
     txt.className = "st-text"; txt.textContent = t.text;
-    if(!t.done) txt.contentEditable = "true";
+    if(!t.done && t.type !== "nacharbeit") txt.contentEditable = "true"; // Nacharbeiten werden über das Formular bearbeitet
     li.appendChild(txt);
     const del = document.createElement("button");
     del.type = "button"; del.className = "st-del"; del.textContent = "✕"; del.setAttribute("aria-label", "Löschen");
@@ -3389,19 +3439,85 @@ sonstVorschlaege.length = 0;
     ["info", "todo"].forEach(kind => {
       const col = stCol(kind);
       const openUl = col.querySelector(".st-open"), doneUl = col.querySelector(".st-done");
+      const naUl = col.querySelector(".st-na-list"); // nur in der Info-Spalte
       openUl.textContent = ""; doneUl.textContent = "";
+      if(naUl) naUl.textContent = "";
       let open = 0, done = 0;
       list.forEach(t => {
         if(t.kind !== kind) return;
         if(t.done && !stPending.has(t.id)){ done++; doneUl.appendChild(stBuildRow(t)); }
-        else { if(!t.done) open++; openUl.appendChild(stBuildRow(t)); }
+        else {
+          if(!t.done) open++;
+          (t.type === "nacharbeit" && naUl ? naUl : openUl).appendChild(stBuildRow(t)); // Nacharbeiten immer unten
+        }
       });
+      if(naUl) naUl.style.display = naUl.children.length ? "" : "none";
       col.querySelector(".st-count").textContent = open;
       const tog = col.querySelector(".st-done-toggle");
       tog.style.display = done ? "" : "none";
       tog.textContent = (stDoneOpen[kind] ? "▾ " : "▸ ") + ST_DONE_LABEL[kind] + " (" + done + ")";
       doneUl.style.display = (done && stDoneOpen[kind]) ? "" : "none";
     });
+    stNaSync();
+  }
+
+  // ---- Nacharbeit-Vorlage: "[Vorname]: x Minuten Donnerstag/Freitag" (x = Vielfaches von 10) ----
+  // Nacharbeit-Modus: Das Eingabefeld der Info-Spalte wird zur Schülerauswahl, das "+" wird rot.
+  const stNa = { open: false, pupil: "", minutes: 10, day: "Donnerstag", editId: null };
+  const naForm = stView.querySelector('.st-col[data-kind="info"] .st-add');
+  const naToggle = naForm.querySelector(".st-na-toggle"), naSelect = naForm.querySelector(".st-na-pupil");
+  const naGo = naForm.querySelector(".st-add-go"), naPanel = stView.querySelector(".st-na-panel");
+  const naMinus = naPanel.querySelector('[data-step="-10"]'), naMinLabel = naPanel.querySelector(".st-na-min");
+
+  function stNaText(n){ return n.pupil + ": " + n.minutes + " Minuten " + n.day; }
+
+  function stNaSync(){
+    naToggle.classList.toggle("open", stNa.open);
+    naForm.classList.toggle("na-mode", stNa.open);
+    naPanel.classList.toggle("show", stNa.open);
+    const names = activeClass().pupils.map(pupilFirstName);
+    if(stNa.pupil && !names.includes(stNa.pupil)) names.push(stNa.pupil); // z. B. Schüler wurde inzwischen entfernt
+    naSelect.textContent = "";
+    const ph = document.createElement("option"); ph.value = ""; ph.textContent = "Schüler wählen …"; naSelect.appendChild(ph);
+    names.forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n; naSelect.appendChild(o); });
+    naSelect.value = stNa.pupil;
+    naMinLabel.textContent = stNa.minutes + " Min.";
+    naMinus.disabled = stNa.minutes <= 10;
+    naPanel.querySelectorAll("[data-day]").forEach(b => b.classList.toggle("on", b.dataset.day === stNa.day));
+    naGo.textContent = (stNa.open && stNa.editId) ? "✓" : "+";
+    naGo.disabled = stNa.open && !stNa.pupil;
+  }
+  naToggle.addEventListener("click", () => { // erneutes Antippen verlässt den Modus (und bricht eine Bearbeitung ab)
+    stNa.open = !stNa.open;
+    stNa.editId = null; stNa.pupil = "";
+    stNaSync();
+  });
+  naSelect.addEventListener("change", () => { stNa.pupil = naSelect.value; stNaSync(); });
+  naPanel.addEventListener("click", (e) => {
+    const s = e.target.closest("[data-step]"), d = e.target.closest("[data-day]");
+    if(s){ stNa.minutes = Math.max(10, stNa.minutes + (+s.dataset.step)); stNaSync(); }
+    else if(d){ stNa.day = d.dataset.day; stNaSync(); }
+  });
+  function stNaSubmit(){
+    if(!stNa.pupil) return;
+    const t = stNa.editId && stFind(stNa.editId);
+    if(t){
+      t.pupil = stNa.pupil; t.minutes = stNa.minutes; t.day = stNa.day; t.text = stNaText(stNa);
+    } else {
+      todosOf(activeClass()).push({
+        id: "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        kind: "info", type: "nacharbeit", pupil: stNa.pupil, minutes: stNa.minutes, day: stNa.day,
+        text: stNaText(stNa), done: false
+      });
+    }
+    stNa.editId = null; stNa.pupil = ""; // Modus bleibt aktiv; Minuten/Tag bleiben für den nächsten Schüler vorbelegt
+    saveClasses(); renderStundeView();
+  }
+  function stNaEdit(id){
+    const t = stFind(id); if(!t) return;
+    stNa.open = true; stNa.editId = id; stNa.pupil = t.pupil; stNa.minutes = t.minutes; stNa.day = t.day;
+    stNaSync();
+    naForm.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 
   function stAdd(kind, text){
@@ -3445,6 +3561,7 @@ sonstVorschlaege.length = 0;
   stView.querySelectorAll(".st-add").forEach(form => {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
+      if(form === naForm && stNa.open){ stNaSubmit(); return; }
       const input = form.querySelector("input");
       stAdd(form.closest(".st-col").dataset.kind, input.value);
       input.value = ""; input.focus(); // Fokus bleibt im Feld: mehrere Einträge hintereinander tippen
@@ -3454,6 +3571,7 @@ sonstVorschlaege.length = 0;
     const li = e.target.closest(".st-item");
     if(e.target.closest(".st-check") && li) stToggleDone(li.dataset.id);
     else if(e.target.closest(".st-del") && li) stDelete(li.dataset.id);
+    else if(e.target.closest(".st-text") && li && li.dataset.type === "nacharbeit" && !li.classList.contains("done")) stNaEdit(li.dataset.id);
     else if(e.target.closest(".st-done-toggle")){
       const kind = e.target.closest(".st-col").dataset.kind;
       stDoneOpen[kind] = !stDoneOpen[kind]; renderStundeView();
@@ -3501,19 +3619,24 @@ sonstVorschlaege.length = 0;
     document.body.style.userSelect = "none"; document.body.style.webkitUserSelect = "none";
 
     let x = e.clientX, y = e.clientY, raf = 0;
+    // Nacharbeiten bilden eine eigene Gruppe unten in der Info-Spalte: sie bleiben in dieser Gruppe,
+    // und andere Einträge können nie unterhalb davon landen.
+    const isNa = li.dataset.type === "nacharbeit";
     function place(){
       for(const el of document.elementsFromPoint(x, y)){
         if(el.closest(".st-ph")) break; // Platzhalter liegt schon unter dem Zeiger
-        const it = el.closest(".st-open > .st-item");
-        if(it && it !== li){
+        const it = el.closest(".st-open > .st-item, .st-na-list > .st-item");
+        if(it && it !== li && it.parentNode.classList.contains("st-na-list") === isNa){
           const r = it.getBoundingClientRect();
           it.parentNode.insertBefore(ph, y < r.top + r.height / 2 ? it : it.nextSibling);
           break;
         }
         const col = el.closest(".st-col");
         if(col){
-          const ul = col.querySelector(".st-open");
-          if(y < ul.getBoundingClientRect().top) ul.insertBefore(ph, ul.firstChild); else ul.appendChild(ph);
+          const ul = isNa ? col.querySelector(".st-na-list") : col.querySelector(".st-open");
+          if(ul){
+            if(y < ul.getBoundingClientRect().top) ul.insertBefore(ph, ul.firstChild); else ul.appendChild(ph);
+          }
           break;
         }
       }
@@ -3544,7 +3667,7 @@ sonstVorschlaege.length = 0;
         const byId = new Map(list.map(t => [t.id, t]));
         const next = [];
         ["info", "todo"].forEach(kind => {
-          stCol(kind).querySelectorAll(".st-open > .st-item").forEach(r => {
+          stCol(kind).querySelectorAll(".st-open > .st-item, .st-na-list > .st-item").forEach(r => {
             const t = byId.get(r.dataset.id);
             if(t){ t.kind = kind; next.push(t); byId.delete(t.id); }
           });
