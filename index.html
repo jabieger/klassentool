@@ -42,19 +42,18 @@
   }
   h1{ font-size:18px; font-weight:700; margin:0; letter-spacing:-0.01em; }
 
-  .header-left{ display:flex; flex-direction:column; align-items:flex-start; gap:8px; min-width:0; max-width:100%; }
+  .header-left{ display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; flex:1 1 300px; min-width:0; max-width:100%; }
 
-  /* ---- Klassen-Tabs (ersetzen das frühere Dropdown): bei vielen Klassen seitlich scrollbar ---- */
-  .class-tabs{
-    display:flex; gap:2px; max-width:100%; overflow-x:auto; scrollbar-width:none;
-    background:var(--stripe); border:1px solid var(--line); border-radius:10px; padding:2px;
-  }
+  /* ---- Klassen-Tabs: Text mit Unterstrich (Registerkarten-Optik), die Ansichts-Tabs daneben sind ein Segment-Schalter.
+         Bei vielen Klassen scrollt die Leiste seitlich. Der Trennstrich erscheint nur, wenn beide in einer Zeile stehen. ---- */
+  .class-tabs{ display:flex; gap:20px; max-width:100%; overflow-x:auto; scrollbar-width:none; }
   .class-tabs::-webkit-scrollbar{ display:none; }
+  .header-left:not(.stacked) .class-tabs{ padding-right:16px; border-right:1px solid var(--line); }
   .class-tabs button{
-    border:none; background:transparent; height:34px; padding:0 14px; font:inherit; font-size:15px; font-weight:700;
-    color:var(--muted); border-radius:8px; cursor:pointer; white-space:nowrap; flex-shrink:0;
+    border:none; border-bottom:2px solid transparent; background:transparent; font:inherit; font-size:16px; font-weight:600;
+    color:var(--muted); padding:8px 0 6px; cursor:pointer; white-space:nowrap; flex-shrink:0;
   }
-  .class-tabs button.active{ background:var(--surface); color:var(--ink); box-shadow:0 0 0 1px var(--line); }
+  .class-tabs button.active{ color:var(--ink); border-bottom-color:var(--ink); }
 
   .settings-btn{
     width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:var(--surface);
@@ -124,7 +123,7 @@
   .datamode-toggle button.active{ background:var(--ink); color:#fff; }
 
   /* ---- Checklisten (Erfassung) ---- */
-  .cl-toolbar{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:12px 18px; }
+  .cl-toolbar{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:12px 18px 14px; border-bottom:1px solid var(--line); margin-bottom:14px; }
   .cl-toolbar-left{ display:none; align-items:center; gap:14px; flex-wrap:wrap; }
   .cl-toolbar-left.show{ display:flex; }
   .cl-newname{ display:flex; align-items:center; gap:6px; }
@@ -132,7 +131,7 @@
   .cl-addbtn{ border:none; background:var(--ink); color:#fff; border-radius:8px; width:28px; height:28px; font-size:16px; cursor:pointer; line-height:1; flex-shrink:0; }
   .cl-archive-line{ font-size:12px; color:var(--muted); cursor:pointer; }
   .cl-overview-btn{
-    margin-left:auto; flex-shrink:0; border:none; border-radius:8px; background:var(--ink); color:#fff;
+    flex-shrink:0; border:none; border-radius:8px; background:var(--ink); color:#fff;
     height:28px; display:inline-flex; align-items:center; padding:0 16px; font-size:12.5px; font-weight:700; cursor:pointer;
   }
   .cl-overview-btn:active{ transform:scale(0.97); }
@@ -165,8 +164,13 @@
 
   .datepicker{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); font-weight:600; }
   .datepicker .weekday{ text-transform:capitalize; }
-  .datepicker input[type=date]{ font:inherit; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:5px 8px; background:var(--surface); }
-  .datepicker .today-btn{ font-size:12px; font-weight:700; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; }
+  .datepicker input[type=date]{ font:inherit; font-size:12.5px; color:var(--ink); border:1px solid var(--line); border-radius:8px; height:28px; padding:0 8px; background:var(--surface); }
+  .datepicker .today-btn{ font-size:12px; font-weight:700; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:8px; height:28px; padding:0 10px; cursor:pointer; }
+  .cl-toolbar .datepicker{ margin-left:auto; }
+  @media (max-width: 520px){ /* schmal: Datumswahl linksbündig, "Übersicht" rechts daneben bzw. darunter */
+    .cl-toolbar .datepicker{ margin-left:0; }
+    .cl-overview-btn{ margin-left:auto; }
+  }
   .datepicker .today-btn:disabled{ opacity:0.4; cursor:default; }
 
   .wrap{ padding:0 18px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
@@ -691,11 +695,6 @@ width: 28px; height: 24px;}
     </div>
   </div>
   <div class="header-controls">
-    <div class="datepicker">
-      <span class="weekday" id="weekdayLabel"></span>
-      <input type="date" id="datePicker">
-      <button class="today-btn" id="todayBtn">Heute</button>
-    </div>
     <button class="settings-btn" id="settingsBtn" title="Einstellungen">⚙️</button>
   </div>
 </header>
@@ -749,6 +748,11 @@ width: 28px; height: 24px;}
       <button class="cl-addbtn" id="clAddBtn" title="Neue Checkliste anlegen">+</button>
     </div>
     <span class="cl-archive-line" id="clArchiveLine" style="display:none;"></span>
+  </div>
+  <div class="datepicker">
+    <span class="weekday" id="weekdayLabel"></span>
+    <input type="date" id="datePicker">
+    <button class="today-btn" id="todayBtn">Heute</button>
   </div>
   <button class="cl-overview-btn" id="overviewBtn">Übersicht</button>
 </div>
@@ -1930,7 +1934,15 @@ width: 28px; height: 24px;}
       classTabs.appendChild(b);
     });
     keepActiveClassTabVisible();
+    updateHeaderWrap();
   }
+  // Trennstrich zwischen Klassen- und Ansichts-Tabs nur anzeigen, wenn beide in einer Zeile stehen
+  const headerLeft = document.querySelector(".header-left");
+  function updateHeaderWrap(){
+    headerLeft.classList.toggle("stacked", document.getElementById("viewTabs").offsetTop > classTabs.offsetTop + 4);
+  }
+  if("ResizeObserver" in window) new ResizeObserver(updateHeaderWrap).observe(headerLeft);
+  window.addEventListener("resize", updateHeaderWrap);
   function keepActiveClassTabVisible(){ // bei vielen Klassen: aktive Klasse im scrollbaren Streifen sichtbar halten
     const act = classTabs.querySelector(".active");
     if(act) act.scrollIntoView({ inline: "nearest", block: "nearest" });
@@ -3325,7 +3337,6 @@ sonstVorschlaege.length = 0;
       document.getElementById(n + "View").style.display = (n === view) ? "" : "none";
     });
     document.querySelectorAll("#viewTabs button").forEach(b => b.classList.toggle("active", b.dataset.view === view));
-    document.querySelector(".datepicker").style.display = (view === "stunde") ? "none" : ""; // Stunde-Ansicht ist datumslos
     if(view === "stunde") renderStundeView();
     if(view === "sitzplan") renderSitzplanView();
     if(view === "zufall") renderZufallView();
