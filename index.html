@@ -42,37 +42,19 @@
   }
   h1{ font-size:18px; font-weight:700; margin:0; letter-spacing:-0.01em; }
 
-  .header-left{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .header-left{ display:flex; flex-direction:column; align-items:flex-start; gap:8px; min-width:0; max-width:100%; }
 
-  /* ---- Klassen-Auswahlmenü ---- */
-  .classpicker{ position:relative; }
-  .classpicker-btn{
-    display:flex; align-items:center; gap:6px;
-    background:var(--surface); border:1px solid var(--line); border-radius:10px;
-    padding:8px 12px; font-size:16px; font-weight:700; color:var(--ink); cursor:pointer;
+  /* ---- Klassen-Tabs (ersetzen das frühere Dropdown): bei vielen Klassen seitlich scrollbar ---- */
+  .class-tabs{
+    display:flex; gap:2px; max-width:100%; overflow-x:auto; scrollbar-width:none;
+    background:var(--stripe); border:1px solid var(--line); border-radius:10px; padding:2px;
   }
-  .classpicker-btn .chev{ font-size:11px; color:var(--muted); transition:transform .15s ease; }
-  .classpicker-btn.open .chev{ transform:rotate(180deg); }
-  .classpicker-menu{
-    position:absolute; top:calc(100% + 6px); left:0; z-index:20;
-    background:var(--surface); border:1px solid var(--line); border-radius:12px;
-    box-shadow:0 12px 32px rgba(20,19,15,0.16); min-width:200px; padding:6px; display:none;
+  .class-tabs::-webkit-scrollbar{ display:none; }
+  .class-tabs button{
+    border:none; background:transparent; height:34px; padding:0 14px; font:inherit; font-size:15px; font-weight:700;
+    color:var(--muted); border-radius:8px; cursor:pointer; white-space:nowrap; flex-shrink:0;
   }
-  .classpicker-menu.show{ display:block; }
-  .classpicker-item{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:10px 12px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;
-  }
-  .classpicker-item:hover{ background:var(--stripe); }
-  .classpicker-item.active{ color:var(--accent); }
-  .classpicker-item .check{ font-size:13px; }
-  .classpicker-item .count{ color:var(--muted); font-weight:500; font-size:12px; }
-  .classpicker-divider{ height:1px; background:var(--line); margin:6px 4px; }
-  .classpicker-manage{
-    display:block; width:100%; text-align:left; background:none; border:none;
-    padding:10px 12px; font-size:13px; font-weight:700; color:var(--accent); cursor:pointer; border-radius:8px;
-  }
-  .classpicker-manage:hover{ background:var(--stripe); }
+  .class-tabs button.active{ background:var(--surface); color:var(--ink); box-shadow:0 0 0 1px var(--line); }
 
   .settings-btn{
     width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:var(--surface);
@@ -700,13 +682,7 @@ width: 28px; height: 24px;}
 
 <header>
   <div class="header-left">
-    <div class="classpicker" id="classpicker">
-      <button class="classpicker-btn" id="classpickerBtn">
-        <span id="classpickerLabel">Beispiel-Klasse</span>
-        <span class="chev">▾</span>
-      </button>
-      <div class="classpicker-menu" id="classpickerMenu"></div>
-    </div>
+    <div class="class-tabs" id="classTabs"></div>
     <div class="view-tabs" id="viewTabs">
       <button data-view="stunde" class="active">📌 Stunde</button>
       <button data-view="erfassung">📋 Erfassung</button>
@@ -1943,57 +1919,26 @@ width: 28px; height: 24px;}
   datePicker.addEventListener("change", () => { if(datePicker.value) applyDate(datePicker.value); });
   todayBtn.addEventListener("click", () => applyDate(todayISO()));
 
-  // ---- Klassen-Dropdown im Header ----
-  const classpicker = document.getElementById("classpicker");
-  const classpickerBtn = document.getElementById("classpickerBtn");
-  const classpickerMenu = document.getElementById("classpickerMenu");
-  const classpickerLabel = document.getElementById("classpickerLabel");
-
-  function renderClasspickerMenu(){
-    classpickerMenu.innerHTML = "";
+  // ---- Klassen-Tabs im Header: ein Tap wechselt die Klasse ----
+  const classTabs = document.getElementById("classTabs");
+  function renderClassTabs(){
+    classTabs.textContent = "";
     classes.forEach(c => {
-      const item = document.createElement("div");
-      item.className = "classpicker-item" + (c.id === activeClassId ? " active" : "");
-      item.innerHTML = `
-        <span>${c.id === activeClassId ? '<span class="check">✓</span> ' : ''}${escapeHTML(c.name)}</span>
-        <span class="count">${c.pupils.length}</span>
-      `;
-      item.addEventListener("click", () => {
-        closeClasspicker();
-        switchToClass(c.id);
-      });
-      classpickerMenu.appendChild(item);
+      const b = document.createElement("button");
+      b.type = "button"; b.dataset.id = c.id; b.textContent = c.name;
+      if(c.id === activeClassId) b.classList.add("active");
+      classTabs.appendChild(b);
     });
-    const divider = document.createElement("div");
-    divider.className = "classpicker-divider";
-    classpickerMenu.appendChild(divider);
-
-    const manageBtn = document.createElement("button");
-    manageBtn.className = "classpicker-manage";
-    manageBtn.textContent = "⚙️ Klassen verwalten …";
-    manageBtn.addEventListener("click", () => {
-      closeClasspicker();
-      openSettings();
-    });
-    classpickerMenu.appendChild(manageBtn);
+    keepActiveClassTabVisible();
   }
-
-  function openClasspicker(){
-    renderClasspickerMenu();
-    classpickerMenu.classList.add("show");
-    classpickerBtn.classList.add("open");
+  function keepActiveClassTabVisible(){ // bei vielen Klassen: aktive Klasse im scrollbaren Streifen sichtbar halten
+    const act = classTabs.querySelector(".active");
+    if(act) act.scrollIntoView({ inline: "nearest", block: "nearest" });
   }
-  function closeClasspicker(){
-    classpickerMenu.classList.remove("show");
-    classpickerBtn.classList.remove("open");
-  }
-  classpickerBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if(classpickerMenu.classList.contains("show")) closeClasspicker();
-    else openClasspicker();
-  });
-  document.addEventListener("click", (e) => {
-    if(!classpicker.contains(e.target)) closeClasspicker();
+  window.addEventListener("resize", keepActiveClassTabVisible);
+  classTabs.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-id]");
+    if(b) switchToClass(b.dataset.id);
   });
 
   // Wechselt die aktive Klasse und aktualisiert Tabelle, Datum bleibt erhalten
@@ -2006,7 +1951,7 @@ width: 28px; height: 24px;}
 
   // Nach jeder Änderung an Klassen/Schülern: Kopfzeile, Tabelle und ggf. offene Einstellungen aktualisieren
   function refreshChrome(){
-    classpickerLabel.textContent = activeClass().name;
+    renderClassTabs();
     renderTable();
     spSelection = null;
     if(currentView === "stunde") renderStundeView();
@@ -4025,7 +3970,7 @@ sonstVorschlaege.length = 0;
     if(zfHistoryOpen) renderZufallHistory();
   });
 
-  classpickerLabel.textContent = activeClass().name;
+  renderClassTabs();
   applyDate(todayISO());
   setView("stunde"); // App startet auf der Stunde-Ansicht
 
